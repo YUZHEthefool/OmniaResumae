@@ -1,0 +1,147 @@
+/**
+ * SectionEditor：渲染单个 section 的标题/布局/显隐 + 条目列表
+ * 按 section.type 调用对应 itemEditor。
+ */
+import { useState } from 'react'
+import { clsx } from 'clsx'
+import type { Section, Locale } from '@/types/resume'
+import { useResumeStore } from '@/store/resumeStore'
+import { SECTION_TITLE_PRESETS } from '@/schema/defaults'
+import { LocalizedInput, Field } from './fields'
+import {
+  WorkEditor, EducationEditor, ProjectEditor, SkillEditor,
+  AwardEditor, PublicationEditor, MatchEditor, DomainEditor,
+  WorkflowEditor, CommunityEditor, createItem, itemTitle,
+} from './itemEditors'
+
+const EDITORS: Record<string, React.FC<{ item: never; update: (p: never) => void }>> = {
+  work: WorkEditor as never,
+  education: EducationEditor as never,
+  projects: ProjectEditor as never,
+  skills: SkillEditor as never,
+  awards: AwardEditor as never,
+  publications: PublicationEditor as never,
+  matches: MatchEditor as never,
+  domains: DomainEditor as never,
+  workflow: WorkflowEditor as never,
+  community: CommunityEditor as never,
+}
+
+export function SectionEditor({ section, locale }: { section: Section; locale: Locale }) {
+  const update = useResumeStore((s) => s.update)
+  const moveSection = useResumeStore((s) => s.moveSection)
+  const removeSection = useResumeStore((s) => s.removeSection)
+  const toggleVisible = useResumeStore((s) => s.toggleSectionVisible)
+  const [open, setOpen] = useState(true)
+
+  const Editor = EDITORS[section.type]
+
+  const setSection = (fn: (d: Section) => void) =>
+    update((d) => {
+      const s = d.sections.find((x) => x.id === section.id)
+      if (s) fn(s)
+    })
+
+  const setItem = (itemId: string, patch: Record<string, unknown>) =>
+    setSection((s) => {
+      s.items = s.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)) as never[]
+    })
+
+  const addItem = () =>
+    setSection((s) => {
+      s.items.push(createItem(s.type) as never)
+    })
+
+  const removeItem = (itemId: string) =>
+    setSection((s) => {
+      s.items = s.items.filter((it) => it.id !== itemId) as never[]
+    })
+
+  const moveItem = (itemId: string, dir: -1 | 1) =>
+    setSection((s) => {
+      const i = s.items.findIndex((it) => it.id === itemId)
+      const j = i + dir
+      if (i < 0 || j < 0 || j >= s.items.length) return
+      const tmp = s.items[i]
+      s.items[i] = s.items[j]
+      s.items[j] = tmp
+    })
+
+  return (
+    <div className="border border-chrome-border rounded mb-2 bg-chrome-panel">
+      <div className="flex items-center gap-2 px-3 py-2 bg-chrome-bg rounded-t">
+        <button
+          type="button"
+          className="text-chrome-muted hover:text-chrome-ink text-xs w-4"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? '▾' : '▸'}
+        </button>
+        <span className="text-xs font-mono px-1.5 py-0.5 bg-chrome-ink text-white rounded">
+          {section.layout === 'main' ? '主' : '侧'}
+        </span>
+        <span className="text-sm font-semibold text-chrome-ink flex-1 truncate">
+          {section.title[locale] || section.title.zh || section.title.en || section.type}
+        </span>
+        <button
+          type="button"
+          title="显示/隐藏"
+          className={clsx('text-xs px-1.5', section.visible ? 'text-chrome-ink' : 'text-chrome-muted line-through')}
+          onClick={() => toggleVisible(section.id)}
+        >
+          {section.visible ? '👁' : '⊘'}
+        </button>
+        <button type="button" title="上移" className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, -1)}>▲</button>
+        <button type="button" title="下移" className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, 1)}>▼</button>
+        <button type="button" title="删除段落" className="text-xs text-chrome-muted hover:text-red-600 px-1" onClick={() => removeSection(section.id)}>✕</button>
+      </div>
+
+      {open && (
+        <div className="p-3">
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <Field label="段落标题">
+              <LocalizedInput value={section.title} onChange={(v) => setSection((s) => { s.title = v })} />
+            </Field>
+            <Field label="布局">
+              <select
+                className="w-full px-2.5 py-1.5 text-sm bg-white border border-chrome-border rounded outline-none"
+                value={section.layout}
+                onChange={(e) => setSection((s) => { s.layout = e.target.value as 'main' | 'sidebar' })}
+              >
+                <option value="main">主栏</option>
+                <option value="sidebar">侧栏</option>
+              </select>
+            </Field>
+          </div>
+
+          {Editor ? (
+            <>
+              {(section.items as Array<{ id: string }>).map((it, i) => (
+                <div key={it.id} className="border border-chrome-border rounded p-2.5 bg-white mb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-mono text-chrome-muted">#{i + 1} {itemTitle(it, locale, SECTION_TITLE_PRESETS[section.type]?.[locale] || section.type)}</span>
+                    <div className="flex gap-1 text-chrome-muted text-xs">
+                      <button type="button" onClick={() => moveItem(it.id, -1)}>▲</button>
+                      <button type="button" onClick={() => moveItem(it.id, 1)}>▼</button>
+                      <button type="button" className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
+                    </div>
+                  </div>
+                  <Editor item={it as never} update={(p: never) => setItem(it.id, p as never)} />
+                </div>
+              ))}
+              <button
+                type="button"
+                className="text-xs text-chrome-ink hover:underline"
+                onClick={addItem}
+              >
+                + 添加条目
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-chrome-muted">该类型暂无可视化编辑器（{section.type}）。</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
