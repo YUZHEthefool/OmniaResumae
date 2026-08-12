@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── 编辑器 chrome 基础 ── */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f6f6f4;
+  color: #1a1a1a;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 滚动条 */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #d4d4cf;
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #b8b8b2;
+}
+
+/* 自托管字体 @font-face 在各模板 CSS 内声明，确保模板独立可用 */
