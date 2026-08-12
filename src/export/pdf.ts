@@ -12,6 +12,38 @@ export type ExportMode = 'single' | 'multi'
 /** 让出主线程一帧，避免长内容导出时 UI 冻结。 */
 const yieldFrame = () => new Promise((r) => setTimeout(r, 0))
 
+/**
+ * 把头像图居中裁剪为正方形 data URL。
+ * html2canvas 对 <img> 的 object-fit:cover 支持不佳，非正方形照片会被拉伸填满方框而非裁剪，
+ * 导致导出头像变形。导出前先把图裁成正方形再换上，方图进方框即不拉伸。
+ * 若图片跨域且未带 CORS 头，canvas 会被污染、toDataURL 抛错，返回 null 回退到原图。
+ */
+async function squareCropAvatar(img: HTMLImageElement): Promise<string | null> {
+  if (!img.complete || img.naturalWidth === 0) return null
+  const nw = img.naturalWidth
+  const nh = img.naturalHeight
+  const side = Math.min(nw, nh)
+  const c = document.createElement('canvas')
+  c.width = side
+  c.height = side
+  const ctx = c.getContext('2d')
+  if (!ctx) return null
+  try {
+    ctx.drawImage(img, (nw - side) / 2, (nh - side) / 2, side, side, 0, 0, side, side)
+    return c.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
+/** 等待一张 <img> 加载完成（已加载或失败也 resolve）。 */
+const awaitImg = (img: HTMLImageElement) =>
+  new Promise<void>((res) => {
+    if (img.complete) return res()
+    img.onload = () => res()
+    img.onerror = () => res()
+  })
+
 /** 一键导出 PDF。mode: single=缩放到一页 A4；multi=按 A4 高度切片（多页保真）。 */
 export async function exportPDF(node: HTMLElement, resume: Resume, locale: Locale, mode: ExportMode = 'single') {
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
@@ -19,12 +51,14 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     import('jspdf'),
   ])
 
-  // 离屏容器：克隆模板内容，按模板设计宽度渲染（非 A4 宽，避免压扁按设计宽布局的内容），
-  // 去除任何 transform（不影响预览缩放）。单页模式加 export-single 类触发紧凑布局，
-  // 并用更宽的渲染宽度让内容更"宽矮"，接近 A4 宽高比、减少两侧留白。
+  // 离屏容器：克隆模板内容，去除任何 transform（不影响预览缩放）。
+  // 单页模式：按 A4 像素宽（794 @96dpi）渲染，配合 .export-single 紧凑布局让内容排近一页 A4；
+  // 若内容仍高于 A4（1123px），最后等比微缩到一页高——宽度随之略缩，但不会像旧逻辑那样
+  // "内容越长 PDF 越窄"（旧逻辑按高度铺满反推宽度，高瘦图必然左右大片留白）。
   // 多页用 scale 2（默认 3 在长内容下像素量爆炸，toDataURL 会卡死主线程）。
-  const scale = mode === 'single' ? 3 : 2
-  const designW = mode === 'single' ? 1200 : (node.scrollWidth || 960)
+  const A4_W_PX = 794
+  const scale = 2
+  const designW = mode === 'single' ? A4_W_PX : (node.scrollWidth || 960)
   const holder = document.createElement('div')
   holder.style.position = 'fixed'
   holder.style.left = '-10000px'
@@ -38,6 +72,22 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   clone.style.width = '100%'
   holder.appendChild(clone)
   document.body.appendChild(holder)
+
+  // 头像预裁剪：html2canvas 对 object-fit:cover 支持不佳，非正方形照片会被拉伸变形。
+  // 导出前把头像图居中裁成正方形 data URL 换到克隆的 <img> 上——方图进方框即不拉伸，
+  // 边框/圆角/阴影仍由模板 CSS 渲染（html2canvas 处理这些盒属性正常），等比缩放也不变形。
+  const origAvatar = node.querySelector<HTMLImageElement>('.avatar')
+  const cloneAvatars = Array.from(holder.querySelectorAll<HTMLImageElement>('.avatar'))
+  if (origAvatar && cloneAvatars.length) {
+    const squared = await squareCropAvatar(origAvatar)
+    if (squared) {
+      cloneAvatars.forEach((av) => {
+        av.src = squared
+        av.style.objectFit = 'fill' // 已是正方形，fill/cover 等效，避免任何 object-fit 歧义
+      })
+      await Promise.all(cloneAvatars.map(awaitImg))
+    }
+  }
   await new Promise((r) => requestAnimationFrame(() => r(null)))
 
   let canvas: HTMLCanvasElement
@@ -86,21 +136,28 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
       await yieldFrame()
     }
   } else {
-    // 单页：整体缩放到一页 A4
-    const A4_RATIO = pageW / pageH
-    const contentRatio = canvas.width / canvas.height
-    let imgW: number, imgH: number, x: number, y: number
-    if (contentRatio >= A4_RATIO) {
+    // 单页：以 A4 宽为基准等比缩放；若内容高于 A4，再整体微缩到一页高，
+    // 宽度随之略缩（但远小于旧逻辑的"越长越窄"——旧逻辑按高铺满反推宽，高瘦图留白严重）。
+    // 内容不足一页时按 A4 宽铺满、垂直居中。
+    const contentRatioPx = canvas.width / canvas.height // 约等于 designW / 内容高
+    const a4Ratio = pageW / pageH
+    let imgW: number, imgH: number
+    if (contentRatioPx >= a4Ratio) {
+      // 内容比 A4 更"宽矮"（少见）：按宽铺满，高度不足则垂直居中
       imgW = pageW
       imgH = (canvas.height * imgW) / canvas.width
-      x = 0
-      y = (pageH - imgH) / 2
     } else {
-      imgH = pageH
-      imgW = (canvas.width * imgH) / canvas.height
-      x = (pageW - imgW) / 2
-      y = 0
+      // 内容比 A4 更"瘦高"（常见，简历多如此）：按 A4 宽铺满，高度按比例算；
+      // 若算出高度超过 A4 高，则改按高铺满（整体微缩），宽度略缩、左右居中。
+      imgW = pageW
+      imgH = (canvas.height * imgW) / canvas.width
+      if (imgH > pageH) {
+        imgH = pageH
+        imgW = (canvas.width * imgH) / canvas.height
+      }
     }
+    const x = (pageW - imgW) / 2
+    const y = (pageH - imgH) / 2
     pdf.setFillColor(255, 255, 255)
     pdf.rect(0, 0, pageW, pageH, 'F')
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, imgW, imgH)

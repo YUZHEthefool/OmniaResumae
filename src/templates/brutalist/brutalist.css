@@ -884,7 +884,7 @@
   padding: 10px 26px;
 }
 .export-single .tpl-brutalist .body-grid {
-  grid-template-columns: 1fr 240px;
+  grid-template-columns: 1fr 210px;
 }
 .export-single .tpl-brutalist .skill-val,
 .export-single .tpl-brutalist .project-desc,

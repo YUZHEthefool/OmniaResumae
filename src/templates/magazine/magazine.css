@@ -189,3 +189,42 @@
 
 @media print { .tpl-mag .page { padding: 30px 36px; } }
 @media (max-width: 720px) { .tpl-mag .grid { grid-template-columns: 1fr; } .tpl-mag .page { padding: 28px 22px; } .tpl-mag .mast-name { font-size: 44px; } }
+
+/* ─── 单页 PDF 导出：按 A4 像素宽(794)渲染，压紧布局让内容排近一页 A4 高(1123) ─── */
+.export-single .tpl-mag .page {
+  max-width: none;
+  padding: 30px 38px;
+}
+.export-single .tpl-mag { font-size: 11.5px; line-height: 1.5; }
+.export-single .tpl-mag .mast { padding: 10px 0 8px; margin-bottom: 14px; }
+.export-single .tpl-mag .avatar { width: 64px; height: 64px; top: 10px; }
+.export-single .tpl-mag .mast-top { font-size: 9px; margin-bottom: 4px; }
+.export-single .tpl-mag .mast-name { font-size: 42px; }
+.export-single .tpl-mag .mast-sub { font-size: 13px; margin-top: 4px; }
+.export-single .tpl-mag .mast-contact { font-size: 10px; margin-top: 8px; gap: 3px 14px; }
+.export-single .tpl-mag .lead { font-size: 12px; margin-bottom: 14px; padding: 8px 12px; line-height: 1.5; }
+.export-single .tpl-mag .grid { grid-template-columns: 1.4fr 1fr; gap: 0 22px; }
+.export-single .tpl-mag .section { margin-bottom: 14px; }
+.export-single .tpl-mag .sec-title { font-size: 16px; margin-bottom: 8px; }
+.export-single .tpl-mag .entry { margin-bottom: 10px; }
+.export-single .tpl-mag .entry-title { font-size: 13px; }
+.export-single .tpl-mag .entry-org { font-size: 11.5px; }
+.export-single .tpl-mag .entry-date { font-size: 9.5px; }
+.export-single .tpl-mag .entry-points li { font-size: 11px; margin-bottom: 1px; line-height: 1.45; }
+.export-single .tpl-mag .project { margin-bottom: 10px; }
+.export-single .tpl-mag .project-name { font-size: 13px; }
+.export-single .tpl-mag .project-desc { font-size: 11px; margin-bottom: 3px; }
+.export-single .tpl-mag .project-points li { font-size: 11px; margin-bottom: 1px; line-height: 1.45; }
+.export-single .tpl-mag .skill-row { grid-template-columns: 95px 1fr; font-size: 11px; margin-bottom: 3px; }
+.export-single .tpl-mag .side-block { margin-bottom: 12px; }
+.export-single .tpl-mag .side-title { font-size: 13px; margin-bottom: 6px; }
+.export-single .tpl-mag .match { margin-bottom: 7px; }
+.export-single .tpl-mag .match-body { font-size: 11px; line-height: 1.45; }
+.export-single .tpl-mag .domain { font-size: 11px; padding: 3px 0; }
+.export-single .tpl-mag .info-row { font-size: 10.5px; margin-bottom: 2px; }
+.export-single .tpl-mag .pub { font-size: 10.5px; margin-bottom: 5px; }
+.export-single .tpl-mag .comm { font-size: 10.5px; margin-bottom: 3px; }
+.export-single .tpl-mag .award { font-size: 10.5px; margin-bottom: 4px; }
+.export-single .tpl-mag .wf-text { font-size: 11px; }
+.export-single .tpl-mag .keywords { margin-bottom: 12px; }
+.export-single .tpl-mag .colophon { margin-top: 14px; padding-top: 6px; }

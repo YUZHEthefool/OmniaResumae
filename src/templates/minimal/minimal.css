@@ -315,3 +315,32 @@
   .tpl-minimal .head-right { text-align: left; }
   .tpl-minimal .page { padding: 32px 24px; }
 }
+
+/* ─── 单页 PDF 导出：按 A4 像素宽(794)渲染，压紧布局让内容排近一页 A4 高(1123) ─── */
+.export-single .tpl-minimal .page {
+  max-width: none;
+  padding: 36px 44px;
+}
+.export-single .tpl-minimal { font-size: 12px; line-height: 1.5; }
+.export-single .tpl-minimal .head { padding-bottom: 16px; margin-bottom: 18px; }
+.export-single .tpl-minimal .head-left .name { font-size: 26px; }
+.export-single .tpl-minimal .head-right { font-size: 10.5px; line-height: 1.5; }
+.export-single .tpl-minimal .summary { font-size: 12px; margin-top: 12px; line-height: 1.55; }
+.export-single .tpl-minimal .section { margin-bottom: 16px; }
+.export-single .tpl-minimal .sec-title { font-size: 10.5px; margin-bottom: 8px; }
+.export-single .tpl-minimal .entry { margin-bottom: 10px; }
+.export-single .tpl-minimal .entry-title { font-size: 12.5px; }
+.export-single .tpl-minimal .entry-org { font-size: 11.5px; }
+.export-single .tpl-minimal .entry-date { font-size: 10px; }
+.export-single .tpl-minimal .entry-points li { font-size: 11.5px; margin-bottom: 1px; line-height: 1.45; }
+.export-single .tpl-minimal .project { margin-bottom: 10px; }
+.export-single .tpl-minimal .project-name { font-size: 12.5px; }
+.export-single .tpl-minimal .project-desc { font-size: 11.5px; margin-bottom: 4px; }
+.export-single .tpl-minimal .project-points li { font-size: 11.5px; margin-bottom: 1px; line-height: 1.45; }
+.export-single .tpl-minimal .skill-grid { grid-template-columns: 120px 1fr; font-size: 11.5px; }
+.export-single .tpl-minimal .pair-list { gap: 8px; }
+.export-single .tpl-minimal .pair-body { font-size: 11.5px; line-height: 1.45; }
+.export-single .tpl-minimal .domain-row { font-size: 11.5px; padding: 4px 0; }
+.export-single .tpl-minimal .wf { gap: 8px; }
+.export-single .tpl-minimal .wf-text { font-size: 11.5px; }
+.export-single .tpl-minimal .keywords { margin-bottom: 16px; }
