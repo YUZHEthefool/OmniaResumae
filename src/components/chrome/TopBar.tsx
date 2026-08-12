@@ -14,6 +14,7 @@ import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { AIDialog } from '@/ai/AIDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { t } from '@/i18n'
+import { Github } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -69,6 +70,17 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <div className="font-bold tracking-tight mr-2 select-none">
         Omnia<span className="text-chrome-muted">Resumae</span>
       </div>
+
+      {/* 项目仓库 */}
+      <a
+        href="https://github.com/YUZHEthefool/OmniaResumae"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="GitHub"
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-chrome-bg text-chrome-muted"
+      >
+        <Github size={16} />
+      </a>
 
       <Divider />
 

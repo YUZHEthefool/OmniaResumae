@@ -36,10 +36,10 @@ const SerifClassicTemplate: FC<TemplateProps> = ({ resume, locale }) => {
           <div className="name">{L(resume.basics.name, locale, '姓名')}</div>
           {L(resume.basics.label, locale) && <div className="label">{L(resume.basics.label, locale)}</div>}
           <div className="contact">
-            {resume.basics.email && <span>✉ {resume.basics.email}</span>}
-            {resume.basics.phone && <span>☎ {resume.basics.phone}</span>}
-            {resume.basics.url && <a href={resume.basics.url}>⌂ {resume.basics.url.replace(/^https?:\/\//, '')}</a>}
-            {L(resume.basics.location, locale) && <span>⌖ {L(resume.basics.location, locale)}</span>}
+            {resume.basics.email && <span>{resume.basics.email}</span>}
+            {resume.basics.phone && <span>{resume.basics.phone}</span>}
+            {resume.basics.url && <a href={resume.basics.url}>{resume.basics.url.replace(/^https?:\/\//, '')}</a>}
+            {L(resume.basics.location, locale) && <span>{L(resume.basics.location, locale)}</span>}
           </div>
           {L(resume.basics.summary, locale) && <p className="summary">{L(resume.basics.summary, locale)}</p>}
         </header>
@@ -177,7 +177,7 @@ function renderSide(section: Section, locale: Locale) {
       if (!(section.items as DomainItem[]).length) return <div className="empty">—</div>
       return <>{(section.items as DomainItem[]).map((d) => (
         <div className="domain" key={d.id}>
-          <span className="domain-icon">{d.icon}</span>
+          {d.icon && <span className="domain-icon">{d.icon}</span>}
           <div>
             <div>{L(d.name, locale)}</div>
             {L(d.sub, locale) && <div className="domain-sub">{L(d.sub, locale)}</div>}

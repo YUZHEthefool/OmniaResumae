@@ -119,9 +119,9 @@ export function createSampleResume(now: number): Resume {
       {
         id: 'sec_dom', type: 'domains', title: { zh: '涉足领域', en: 'Domains' }, layout: 'sidebar', visible: true,
         items: [
-          { id: 'd1', icon: '🛠️', name: { zh: '开发者工具', en: 'Dev Tools' }, sub: { zh: '简历 · 组件库 · 构建', en: 'Resume · Libs · Build' } },
-          { id: 'd2', icon: '🤖', name: { zh: 'AI 应用', en: 'AI Apps' }, sub: { zh: '多模型 · 结构化输出', en: 'Multi-model · Structured' } },
-          { id: 'd3', icon: '🎨', name: { zh: '模板引擎', en: 'Templating' }, sub: { zh: '多风格 · 实时渲染', en: 'Multi-style · Live' } },
+          { id: 'd1', icon: '', name: { zh: '开发者工具', en: 'Dev Tools' }, sub: { zh: '简历 · 组件库 · 构建', en: 'Resume · Libs · Build' } },
+          { id: 'd2', icon: '', name: { zh: 'AI 应用', en: 'AI Apps' }, sub: { zh: '多模型 · 结构化输出', en: 'Multi-model · Structured' } },
+          { id: 'd3', icon: '', name: { zh: '模板引擎', en: 'Templating' }, sub: { zh: '多风格 · 实时渲染', en: 'Multi-style · Live' } },
         ],
       },
       {

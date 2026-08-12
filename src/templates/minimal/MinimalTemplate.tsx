@@ -194,7 +194,7 @@ function DomainList({ items, locale }: { items: DomainItem[]; locale: Locale }) 
     <div>
       {items.map((d) => (
         <div className="domain-row" key={d.id}>
-          <span className="domain-icon">{d.icon}</span>
+          {d.icon && <span className="domain-icon">{d.icon}</span>}
           <span>{L(d.name, locale)}</span>
           {L(d.sub, locale) && <span className="domain-sub">· {L(d.sub, locale)}</span>}
         </div>
