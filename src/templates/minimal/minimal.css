@@ -1,0 +1,317 @@
+/* ─────────────────────────────────────────────────────────────
+ * Minimal / Swiss 模板
+ * 单栏、Inter、大量留白、细分割线、单色。国际化默认。
+ * 全部前缀 .tpl-minimal 隔离。
+ * ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+.tpl-minimal {
+  --m-ink: #1a1a1a;
+  --m-muted: #6b6b6b;
+  --m-line: #e2e2e2;
+  --m-accent: #1a1a1a;
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  font-size: 14px;
+  background: #fff;
+  color: var(--m-ink);
+  font-family: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.tpl-minimal .page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 56px 64px;
+}
+
+/* ─── HEADER ─── */
+.tpl-minimal .head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--m-ink);
+  margin-bottom: 32px;
+}
+
+.tpl-minimal .head-left .name {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tpl-minimal .head-left .label {
+  font-size: 14px;
+  color: var(--m-muted);
+  margin-top: 4px;
+}
+
+.tpl-minimal .head-right {
+  text-align: right;
+  font-size: 12px;
+  color: var(--m-muted);
+  line-height: 1.7;
+}
+
+.tpl-minimal .avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 0 10px auto;
+  display: block;
+  border: 1px solid var(--m-line);
+}
+
+.tpl-minimal .head-right a {
+  color: var(--m-muted);
+  text-decoration: none;
+}
+
+.tpl-minimal .summary {
+  font-size: 13.5px;
+  color: var(--m-muted);
+  margin-top: 20px;
+  line-height: 1.7;
+  max-width: 90%;
+}
+
+/* ─── SECTION ─── */
+.tpl-minimal .section {
+  margin-bottom: 28px;
+}
+
+.tpl-minimal .sec-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--m-accent);
+  margin-bottom: 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--m-line);
+}
+
+/* ─── ENTRY (work/education) ─── */
+.tpl-minimal .entry {
+  margin-bottom: 18px;
+  page-break-inside: avoid;
+}
+.tpl-minimal .entry:last-child { margin-bottom: 0; }
+
+.tpl-minimal .entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.tpl-minimal .entry-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tpl-minimal .entry-org {
+  font-size: 13px;
+  color: var(--m-muted);
+  font-weight: 500;
+}
+
+.tpl-minimal .entry-date {
+  font-size: 11.5px;
+  color: var(--m-muted);
+  white-space: nowrap;
+}
+
+.tpl-minimal .entry-points {
+  list-style: none;
+  margin-top: 6px;
+}
+
+.tpl-minimal .entry-points li {
+  font-size: 13px;
+  color: #333;
+  padding-left: 14px;
+  position: relative;
+  margin-bottom: 3px;
+  line-height: 1.6;
+}
+.tpl-minimal .entry-points li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--m-muted);
+}
+
+/* ─── PROJECT ─── */
+.tpl-minimal .project {
+  margin-bottom: 16px;
+  page-break-inside: avoid;
+}
+.tpl-minimal .project:last-child { margin-bottom: 0; }
+
+.tpl-minimal .project-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.tpl-minimal .project-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tpl-minimal .project-link {
+  font-size: 11px;
+  color: var(--m-muted);
+  text-decoration: none;
+}
+
+.tpl-minimal .project-desc {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.tpl-minimal .project-meta {
+  font-size: 11px;
+  color: var(--m-muted);
+  margin-bottom: 6px;
+}
+
+.tpl-minimal .project-points {
+  list-style: none;
+}
+.tpl-minimal .project-points li {
+  font-size: 13px;
+  color: #333;
+  padding-left: 14px;
+  position: relative;
+  margin-bottom: 3px;
+  line-height: 1.6;
+}
+.tpl-minimal .project-points li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--m-muted);
+}
+
+/* ─── SKILL ─── */
+.tpl-minimal .skill-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 4px 16px;
+  font-size: 13px;
+}
+.tpl-minimal .skill-key {
+  color: var(--m-muted);
+  font-weight: 500;
+}
+.tpl-minimal .skill-val {
+  color: #333;
+}
+
+/* ─── 通用 tags ─── */
+.tpl-minimal .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tpl-minimal .tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--m-line);
+  border-radius: 2px;
+  color: #444;
+}
+
+/* ─── 招聘匹配 / 领域 / 专利 / 社区 / 奖项 通用块 ─── */
+.tpl-minimal .pair-list { display: flex; flex-direction: column; gap: 12px; }
+.tpl-minimal .pair { page-break-inside: avoid; }
+.tpl-minimal .pair-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-accent);
+  margin-bottom: 2px;
+}
+.tpl-minimal .pair-body {
+  font-size: 13px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.tpl-minimal .domain-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--m-line);
+  font-size: 13px;
+}
+.tpl-minimal .domain-row:last-child { border-bottom: none; }
+.tpl-minimal .domain-icon { font-size: 16px; }
+.tpl-minimal .domain-sub { color: var(--m-muted); font-size: 11.5px; margin-left: 4px; }
+
+.tpl-minimal .pub-row { margin-bottom: 10px; font-size: 13px; }
+.tpl-minimal .pub-name { font-weight: 500; }
+.tpl-minimal .pub-date { color: var(--m-muted); font-size: 11.5px; }
+
+.tpl-minimal .comm-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--m-line);
+}
+.tpl-minimal .comm-row:last-child { border-bottom: none; }
+.tpl-minimal .comm-platform { color: var(--m-muted); }
+
+.tpl-minimal .award-row {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.tpl-minimal .award-title { font-weight: 500; }
+.tpl-minimal .award-meta { color: var(--m-muted); font-size: 11.5px; }
+
+.tpl-minimal .empty { color: var(--m-muted); font-size: 12px; }
+
+/* ─── workflow ─── */
+.tpl-minimal .wf { display: flex; flex-direction: column; gap: 12px; }
+.tpl-minimal .wf-item { page-break-inside: avoid; }
+.tpl-minimal .wf-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--m-accent); margin-bottom: 2px;
+}
+.tpl-minimal .wf-text { font-size: 13px; color: #333; }
+
+/* keyword chips */
+.tpl-minimal .keywords {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 28px;
+}
+.tpl-minimal .kw {
+  font-size: 10.5px; padding: 3px 8px; border: 1px solid var(--m-line); color: var(--m-muted);
+}
+
+@media print {
+  .tpl-minimal .page { padding: 32px 40px; }
+}
+
+@media (max-width: 720px) {
+  .tpl-minimal .head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .tpl-minimal .head-right { text-align: left; }
+  .tpl-minimal .page { padding: 32px 24px; }
+}
