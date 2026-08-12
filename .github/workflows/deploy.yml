@@ -1,0 +1,43 @@
+# 构建 Vite 静态产物并直传 Cloudflare Pages
+# 不依赖 Cloudflare 的 Git 自动部署；push 到 main 即由 GitHub Actions 上线。
+#
+# 首次使用前，在仓库 Settings → Secrets and variables → Actions 添加两个 secret：
+#   CLOUDFLARE_API_TOKEN  —— https://dash.cloudflare.com/profile/api-tokens
+#                            用 "Edit Cloudflare Workers" 模板创建（含 Pages 权限）
+#   CLOUDFLARE_ACCOUNT_ID —— 仪表盘右下 / Workers & Pages 概览页可见
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          CI: true
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: omnia-resumae
+          directory: dist
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
