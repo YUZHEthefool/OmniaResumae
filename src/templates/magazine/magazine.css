@@ -1,0 +1,191 @@
+/* ─────────────────────────────────────────────────────────────
+ * Magazine / Editorial 模板
+ * Playfair 大标题、分栏、强调色、更图形化。前缀 .tpl-mag。
+ * ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Inter:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+.tpl-mag {
+  --z-ink: #1c1a17;
+  --z-paper: #faf7f0;
+  --z-accent: #b8401f;
+  --z-muted: #8a8378;
+  --z-line: #d9d2c4;
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  font-size: 13.5px;
+  background: var(--z-paper);
+  color: var(--z-ink);
+  font-family: 'Inter', 'Noto Serif SC', serif;
+  line-height: 1.6;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.tpl-mag .page { max-width: 820px; margin: 0 auto; padding: 48px 52px; }
+
+/* ─── MASTHEAD ─── */
+.tpl-mag .mast {
+  border-top: 6px double var(--z-ink);
+  border-bottom: 1px solid var(--z-ink);
+  padding: 18px 0 14px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.tpl-mag .avatar {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--z-accent);
+}
+.tpl-mag .mast-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--z-muted); margin-bottom: 6px;
+}
+.tpl-mag .mast-name {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 64px; line-height: 1; font-weight: 900; letter-spacing: -0.02em;
+}
+.tpl-mag .mast-name em { color: var(--z-accent); font-style: italic; font-weight: 400; }
+.tpl-mag .mast-sub {
+  margin-top: 8px;
+  font-family: 'Playfair Display', serif; font-style: italic; font-size: 16px; color: var(--z-accent);
+}
+.tpl-mag .mast-contact {
+  display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 12px;
+  font-family: 'Inter', sans-serif; font-size: 11.5px; color: var(--z-ink);
+}
+.tpl-mag .mast-contact a { color: var(--z-ink); text-decoration: none; border-bottom: 1px dotted var(--z-muted); }
+
+.tpl-mag .lead {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 15px; font-style: italic; color: var(--z-ink);
+  line-height: 1.7; margin-bottom: 24px; padding: 12px 16px;
+  border-left: 3px solid var(--z-accent); background: rgba(184,64,31,0.05);
+}
+
+/* ─── GRID ─── */
+.tpl-mag .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 0 30px; }
+.tpl-mag .col-main { min-width: 0; }
+.tpl-mag .col-side { min-width: 0; }
+
+/* ─── SECTION ─── */
+.tpl-mag .section { margin-bottom: 24px; }
+.tpl-mag .sec-title {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 22px; font-weight: 700; color: var(--z-ink);
+  margin-bottom: 12px; padding-bottom: 4px;
+  border-bottom: 2px solid var(--z-ink);
+  display: flex; align-items: baseline; gap: 8px;
+}
+.tpl-mag .sec-title::before {
+  content: '§'; color: var(--z-accent); font-size: 18px; font-weight: 400;
+}
+
+/* ─── ENTRY ─── */
+.tpl-mag .entry { margin-bottom: 16px; page-break-inside: avoid; }
+.tpl-mag .entry:last-child { margin-bottom: 0; }
+.tpl-mag .entry-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 3px;
+}
+.tpl-mag .entry-title {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 15px; font-weight: 700;
+}
+.tpl-mag .entry-org { color: var(--z-accent); font-weight: 600; font-size: 13px; }
+.tpl-mag .entry-date {
+  font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--z-muted);
+  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+.tpl-mag .entry-points { list-style: none; margin-top: 5px; }
+.tpl-mag .entry-points li {
+  font-size: 12.5px; color: var(--z-ink); padding-left: 16px; position: relative;
+  margin-bottom: 3px; line-height: 1.6;
+}
+.tpl-mag .entry-points li::before {
+  content: '§'; position: absolute; left: 0; color: var(--z-accent); font-size: 11px;
+}
+
+/* ─── PROJECT ─── */
+.tpl-mag .project { margin-bottom: 16px; page-break-inside: avoid; }
+.tpl-mag .project:last-child { margin-bottom: 0; }
+.tpl-mag .project-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.tpl-mag .project-name {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 15px; font-weight: 700;
+}
+.tpl-mag .project-link {
+  font-family: 'Inter', sans-serif; font-size: 10.5px; color: var(--z-accent); text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.tpl-mag .project-desc { font-size: 12.5px; color: var(--z-ink); margin-bottom: 5px; font-style: italic; }
+.tpl-mag .project-meta { font-family: 'Inter', sans-serif; font-size: 10px; color: var(--z-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+.tpl-mag .project-points { list-style: none; }
+.tpl-mag .project-points li { font-size: 12.5px; color: var(--z-ink); padding-left: 16px; position: relative; margin-bottom: 3px; line-height: 1.6; }
+.tpl-mag .project-points li::before { content: '§'; position: absolute; left: 0; color: var(--z-accent); font-size: 11px; }
+
+/* ─── SKILL ─── */
+.tpl-mag .skill-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; font-size: 12.5px; margin-bottom: 5px; align-items: baseline; }
+.tpl-mag .skill-key { font-family: 'Playfair Display', serif; font-weight: 600; color: var(--z-accent); }
+.tpl-mag .skill-val { color: var(--z-ink); }
+
+/* ─── 侧栏 ─── */
+.tpl-mag .side-block { margin-bottom: 20px; page-break-inside: avoid; }
+.tpl-mag .side-title {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 16px; font-weight: 700; color: var(--z-ink);
+  margin-bottom: 8px; border-bottom: 1px solid var(--z-ink); padding-bottom: 3px;
+}
+.tpl-mag .match { margin-bottom: 10px; }
+.tpl-mag .match-tag { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 600; color: var(--z-accent); margin-bottom: 2px; }
+.tpl-mag .match-body { font-size: 12px; color: var(--z-ink); line-height: 1.55; }
+
+.tpl-mag .domain { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dotted var(--z-line); font-size: 12.5px; }
+.tpl-mag .domain:last-child { border-bottom: none; }
+.tpl-mag .domain-icon { font-size: 15px; }
+.tpl-mag .domain-sub { color: var(--z-muted); font-size: 11px; }
+
+.tpl-mag .info-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 3px; }
+.tpl-mag .info-k { color: var(--z-muted); font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; min-width: 50px; }
+.tpl-mag .info-v { color: var(--z-ink); font-weight: 500; }
+
+.tpl-mag .pub { font-size: 12px; margin-bottom: 8px; padding-left: 10px; border-left: 2px solid var(--z-accent); }
+.tpl-mag .pub-name { font-family: 'Playfair Display', serif; font-weight: 600; }
+.tpl-mag .pub-date { color: var(--z-muted); font-size: 10.5px; font-family: 'Inter', sans-serif; }
+
+.tpl-mag .comm { font-size: 12px; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
+.tpl-mag .comm .p { color: var(--z-muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; }
+
+.tpl-mag .award { font-size: 12px; margin-bottom: 6px; }
+.tpl-mag .award-title { font-family: 'Playfair Display', serif; font-weight: 600; }
+.tpl-mag .award-meta { color: var(--z-muted); font-size: 10.5px; font-family: 'Inter', sans-serif; }
+
+.tpl-mag .wf { margin-bottom: 10px; }
+.tpl-mag .wf-label { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 600; color: var(--z-accent); margin-bottom: 1px; }
+.tpl-mag .wf-text { font-size: 12.5px; color: var(--z-ink); }
+
+.tpl-mag .empty { color: var(--z-muted); font-size: 12px; font-style: italic; }
+
+.tpl-mag .keywords { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.tpl-mag .kw {
+  font-family: 'Inter', sans-serif; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 10px; background: var(--z-ink); color: var(--z-paper); border-radius: 999px;
+}
+
+/* footer */
+.tpl-mag .colophon {
+  margin-top: 24px; padding-top: 10px; border-top: 1px solid var(--z-line);
+  display: flex; justify-content: space-between;
+  font-family: 'Inter', sans-serif; font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--z-muted);
+}
+
+@media print { .tpl-mag .page { padding: 30px 36px; } }
+@media (max-width: 720px) { .tpl-mag .grid { grid-template-columns: 1fr; } .tpl-mag .page { padding: 28px 22px; } .tpl-mag .mast-name { font-size: 44px; } }
