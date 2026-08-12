@@ -1,0 +1,244 @@
+/* ─────────────────────────────────────────────────────────────
+ * Serif Classic 模板 — 参照 LapisCV serif
+ * 思源宋体、蓝主色、双栏。HR 熟悉的传统风。前缀 .tpl-serif。
+ * ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Noto+Serif+SC:wght@400;600;700&family=Source+Code+Pro:wght@400;600&display=swap');
+
+.tpl-serif {
+  --s-ink: #2a2a2a;
+  --s-muted: #6b7280;
+  --s-line: #d8dee5;
+  --s-accent: #4870ac;
+  --s-bg-soft: #f5f7fa;
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  font-size: 14px;
+  background: #fff;
+  color: var(--s-ink);
+  font-family: 'Source Serif 4', 'Noto Serif SC', Georgia, serif;
+  line-height: 1.65;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.tpl-serif .page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 56px;
+}
+
+/* ─── HEADER ─── */
+.tpl-serif .head {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid var(--s-accent);
+  margin-bottom: 28px;
+}
+
+.tpl-serif .avatar {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 10px;
+  display: block;
+  border: 2px solid var(--s-accent);
+}
+
+.tpl-serif .name {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--s-ink);
+}
+
+.tpl-serif .label {
+  font-size: 14px;
+  color: var(--s-accent);
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.tpl-serif .contact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--s-muted);
+  font-family: 'Source Code Pro', monospace;
+}
+.tpl-serif .contact a { color: var(--s-muted); text-decoration: none; }
+.tpl-serif .contact span { display: inline-flex; align-items: center; gap: 4px; }
+
+.tpl-serif .summary {
+  font-size: 13.5px;
+  color: var(--s-muted);
+  margin-top: 14px;
+  font-style: italic;
+  line-height: 1.7;
+}
+
+/* ─── GRID ─── */
+.tpl-serif .grid {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 0 28px;
+}
+
+.tpl-serif .col-main { min-width: 0; }
+.tpl-serif .col-side { min-width: 0; }
+
+/* ─── SECTION ─── */
+.tpl-serif .section { margin-bottom: 22px; }
+
+.tpl-serif .sec-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--s-accent);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--s-line);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tpl-serif .sec-title::before {
+  content: '';
+  width: 14px;
+  height: 2px;
+  background: var(--s-accent);
+}
+
+/* ─── ENTRY ─── */
+.tpl-serif .entry { margin-bottom: 14px; page-break-inside: avoid; }
+.tpl-serif .entry:last-child { margin-bottom: 0; }
+
+.tpl-serif .entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 2px;
+}
+
+.tpl-serif .entry-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--s-ink);
+}
+.tpl-serif .entry-org { font-weight: 600; color: var(--s-accent); }
+.tpl-serif .entry-date {
+  font-size: 11.5px;
+  color: var(--s-muted);
+  font-family: 'Source Code Pro', monospace;
+  white-space: nowrap;
+}
+.tpl-serif .entry-points {
+  list-style: none;
+  margin-top: 4px;
+}
+.tpl-serif .entry-points li {
+  font-size: 13px;
+  color: var(--s-ink);
+  padding-left: 13px;
+  position: relative;
+  margin-bottom: 2px;
+  line-height: 1.6;
+}
+.tpl-serif .entry-points li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--s-accent);
+}
+
+/* ─── PROJECT ─── */
+.tpl-serif .project { margin-bottom: 14px; page-break-inside: avoid; }
+.tpl-serif .project:last-child { margin-bottom: 0; }
+.tpl-serif .project-head {
+  display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;
+}
+.tpl-serif .project-name { font-size: 13.5px; font-weight: 700; }
+.tpl-serif .project-link {
+  font-size: 11px; color: var(--s-accent); text-decoration: none;
+  font-family: 'Source Code Pro', monospace;
+}
+.tpl-serif .project-desc { font-size: 13px; color: var(--s-ink); margin-bottom: 4px; }
+.tpl-serif .project-meta { font-size: 11px; color: var(--s-muted); margin-bottom: 4px; font-family: 'Source Code Pro', monospace; }
+.tpl-serif .project-points { list-style: none; }
+.tpl-serif .project-points li {
+  font-size: 13px; color: var(--s-ink); padding-left: 13px; position: relative;
+  margin-bottom: 2px; line-height: 1.6;
+}
+.tpl-serif .project-points li::before { content: '•'; position: absolute; left: 0; color: var(--s-accent); }
+
+/* ─── SKILL ─── */
+.tpl-serif .skill-row {
+  display: grid; grid-template-columns: 90px 1fr; gap: 8px;
+  font-size: 12.5px; margin-bottom: 4px;
+}
+.tpl-serif .skill-key { color: var(--s-accent); font-weight: 600; }
+.tpl-serif .skill-val { color: var(--s-ink); }
+
+/* ─── 侧栏块 ─── */
+.tpl-serif .side-block {
+  background: var(--s-bg-soft);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border-left: 2px solid var(--s-accent);
+  page-break-inside: avoid;
+}
+.tpl-serif .side-block:last-child { margin-bottom: 0; }
+.tpl-serif .side-title {
+  font-size: 12px; font-weight: 700; color: var(--s-accent);
+  letter-spacing: 0.04em; margin-bottom: 8px;
+}
+
+.tpl-serif .match { margin-bottom: 8px; }
+.tpl-serif .match:last-child { margin-bottom: 0; }
+.tpl-serif .match-tag { font-size: 11.5px; font-weight: 700; color: var(--s-ink); margin-bottom: 1px; }
+.tpl-serif .match-body { font-size: 12px; color: var(--s-muted); line-height: 1.55; }
+
+.tpl-serif .domain { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12.5px; }
+.tpl-serif .domain-icon { font-size: 15px; }
+.tpl-serif .domain-sub { color: var(--s-muted); font-size: 11px; }
+
+.tpl-serif .info-line { font-size: 12px; margin-bottom: 4px; color: var(--s-ink); }
+.tpl-serif .info-line .k { color: var(--s-muted); }
+
+.tpl-serif .pub { font-size: 12px; margin-bottom: 6px; }
+.tpl-serif .pub-name { font-weight: 600; }
+.tpl-serif .pub-date { color: var(--s-muted); font-size: 11px; }
+
+.tpl-serif .comm { font-size: 12px; margin-bottom: 4px; font-family: 'Source Code Pro', monospace; }
+.tpl-serif .comm .p { color: var(--s-muted); }
+
+.tpl-serif .award { font-size: 12px; margin-bottom: 5px; }
+.tpl-serif .award-title { font-weight: 600; }
+.tpl-serif .award-meta { color: var(--s-muted); font-size: 11px; }
+
+.tpl-serif .wf { margin-bottom: 8px; }
+.tpl-serif .wf-label { font-size: 11.5px; font-weight: 700; color: var(--s-accent); margin-bottom: 1px; }
+.tpl-serif .wf-text { font-size: 12.5px; color: var(--s-ink); }
+
+.tpl-serif .empty { color: var(--s-muted); font-size: 12px; font-style: italic; }
+
+.tpl-serif .keywords { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 22px; justify-content: center; }
+.tpl-serif .kw {
+  font-size: 10.5px; padding: 2px 8px; background: var(--s-bg-soft);
+  color: var(--s-accent); border-radius: 2px;
+}
+
+@media print { .tpl-serif .page { padding: 28px 36px; } }
+@media (max-width: 720px) {
+  .tpl-serif .grid { grid-template-columns: 1fr; }
+  .tpl-serif .page { padding: 28px 24px; }
+}
