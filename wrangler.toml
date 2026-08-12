@@ -1,0 +1,12 @@
+# Cloudflare Pages 配置 —— 供 Git 自动部署与本地 wrangler 直传共用
+#
+# Git 自动部署（方式 A）:
+#   仪表盘里 Build command 仍需设为 `npm run build`；此文件主要声明产物目录，
+#   供 Pages 识别 build 输出位置。项目名固定为 omnia-resumae。
+# 本地直传（方式 B，可选）:
+#   npm run build && wrangler pages deploy
+#   （有了 pages_build_output_dir，无需再带 --project-name 与目录参数）
+
+name = "omnia-resumae"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-12"
