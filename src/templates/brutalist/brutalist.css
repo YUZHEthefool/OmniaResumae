@@ -1,0 +1,898 @@
+/* ─────────────────────────────────────────────────────────────
+ * Brutalist 模板样式（移植自 resume-template.html）
+ * 全部前缀 .tpl-brutalist 以隔离，避免污染编辑器与其它模板。
+ * 字体优先自托管（public/fonts），缺省回退到 Google Fonts 在线版。
+ * ───────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700;900&display=swap');
+
+.tpl-brutalist {
+  --b-black: #0a0a0a;
+  --b-white: #f4f1e8;
+  --b-yellow: #ffe500;
+  --b-red: #ff2200;
+  --b-gray: #999;
+  --b-light: #e8e4d8;
+  --b-border: 3px solid var(--b-black);
+  --b-border-thick: 6px solid var(--b-black);
+  --b-border-thin: 1.5px solid var(--b-black);
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  font-size: 17px;
+  background: var(--b-white);
+  color: var(--b-black);
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  line-height: 1.5;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.tpl-brutalist .page {
+  max-width: 960px;
+  margin: 0 auto;
+  border-top: var(--b-border-thick);
+  border-left: var(--b-border-thick);
+  border-right: var(--b-border-thick);
+}
+
+/* ─── HEADER ─── */
+.tpl-brutalist .header {
+  border-bottom: var(--b-border-thick);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 头像：方形粗边，浮于 header-left 右上角 */
+.tpl-brutalist .avatar {
+  float: right;
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border: 3px solid var(--b-black);
+  box-shadow: 4px 4px 0 var(--b-yellow);
+  margin: 0 0 10px 16px;
+}
+
+.tpl-brutalist .header-left {
+  padding: 40px 36px 36px;
+  border-right: var(--b-border-thick);
+}
+
+.tpl-brutalist .chip {
+  display: inline-block;
+  background: var(--b-black);
+  color: var(--b-yellow);
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  margin-bottom: 14px;
+}
+
+.tpl-brutalist .name {
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 96px;
+  line-height: 0.88;
+  letter-spacing: -0.01em;
+  display: block;
+}
+
+.tpl-brutalist .name-sub {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--b-gray);
+  margin-top: 10px;
+  display: block;
+}
+
+.tpl-brutalist .pride-block {
+  margin-top: 22px;
+  border: var(--b-border);
+  padding: 12px 14px;
+  background: var(--b-yellow);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tpl-brutalist .pride-label {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--b-black);
+  white-space: nowrap;
+  margin-top: 2px;
+  border-right: 1.5px solid var(--b-black);
+  padding-right: 10px;
+  min-width: 56px;
+}
+
+.tpl-brutalist .pride-text {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--b-black);
+  line-height: 1.55;
+}
+
+.tpl-brutalist .header-right {
+  padding: 40px 36px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tpl-brutalist .meta-group {
+  border-bottom: var(--b-border-thin);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.tpl-brutalist .meta-group:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.tpl-brutalist .meta-label {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--b-gray);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.tpl-brutalist .meta-value {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--b-black);
+  line-height: 1.5;
+}
+
+.tpl-brutalist .meta-value.red {
+  color: var(--b-red);
+}
+
+/* ─── DIVIDER BAR ─── */
+.tpl-brutalist .divider-bar {
+  background: var(--b-black);
+  border-bottom: var(--b-border-thick);
+  padding: 8px 36px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tpl-brutalist .divider-bar span {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-yellow);
+}
+
+.tpl-brutalist .divider-sep {
+  color: rgba(255, 229, 0, 0.3) !important;
+}
+
+/* ─── BODY GRID ─── */
+.tpl-brutalist .body-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  border-bottom: var(--b-border-thick);
+}
+
+.tpl-brutalist .col-main {
+  border-right: var(--b-border-thick);
+}
+
+/* ─── SECTION ─── */
+.tpl-brutalist .section {
+  border-bottom: var(--b-border);
+  padding: 28px 36px;
+}
+
+.tpl-brutalist .section:last-child {
+  border-bottom: none;
+}
+
+.tpl-brutalist .sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.tpl-brutalist .sec-num {
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 40px;
+  line-height: 1;
+  color: var(--b-yellow);
+  -webkit-text-stroke: 1.5px var(--b-black);
+}
+
+.tpl-brutalist .sec-title {
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 24px;
+  letter-spacing: 0.05em;
+}
+
+/* ─── SKILL TABLE ─── */
+.tpl-brutalist .skill-table {
+  border: var(--b-border);
+  width: 100%;
+}
+
+.tpl-brutalist .skill-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  border-bottom: var(--b-border-thin);
+}
+
+.tpl-brutalist .skill-row:last-child {
+  border-bottom: none;
+}
+
+.tpl-brutalist .skill-key {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--b-black);
+  background: var(--b-light);
+  padding: 10px 12px;
+  border-right: var(--b-border-thin);
+  line-height: 1.45;
+}
+
+.tpl-brutalist .skill-val {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  padding: 10px 14px;
+  color: #222;
+}
+
+/* ─── PROJECT CARD ─── */
+.tpl-brutalist .proj-group { margin-bottom: 18px; }
+.tpl-brutalist .proj-group:last-child { margin-bottom: 0; }
+.tpl-brutalist .proj-group-head {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--b-gray);
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px dashed var(--b-gray);
+}
+
+.tpl-brutalist .project-card {
+  border: var(--b-border);
+  margin-bottom: 14px;
+  position: relative;
+  page-break-inside: avoid;
+}
+
+.tpl-brutalist .project-card:last-child {
+  margin-bottom: 0;
+}
+
+.tpl-brutalist .project-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--b-yellow);
+}
+
+.tpl-brutalist .project-card.dev::before {
+  background: var(--b-red);
+}
+
+.tpl-brutalist .project-card.pat::before {
+  background: var(--b-black);
+}
+
+.tpl-brutalist .project-inner {
+  padding: 14px 16px 14px 21px;
+}
+
+.tpl-brutalist .project-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.tpl-brutalist .project-name {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tpl-brutalist .badge {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1.5px solid var(--b-black);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tpl-brutalist .badge.oss {
+  background: var(--b-yellow);
+}
+
+.tpl-brutalist .badge.dev {
+  background: var(--b-red);
+  color: #fff;
+}
+
+.tpl-brutalist .badge.pat {
+  background: var(--b-black);
+  color: var(--b-yellow);
+}
+
+.tpl-brutalist .project-desc {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .project-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid #d8d4c8;
+  padding-top: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tpl-brutalist .project-points li {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #444;
+  padding-left: 14px;
+  position: relative;
+}
+
+.tpl-brutalist .project-points li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  color: var(--b-red);
+}
+
+.tpl-brutalist .project-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--b-black);
+  text-decoration: none;
+  border-bottom: 1.5px solid var(--b-black);
+}
+
+.tpl-brutalist .project-meta {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  color: var(--b-gray);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* ─── WORKFLOW ─── */
+.tpl-brutalist .workflow {
+  border: var(--b-border);
+}
+
+.tpl-brutalist .wf-step {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  border-bottom: var(--b-border-thin);
+}
+
+.tpl-brutalist .wf-step:last-child {
+  border-bottom: none;
+}
+
+.tpl-brutalist .wf-num {
+  background: var(--b-black);
+  color: var(--b-yellow);
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.tpl-brutalist .wf-body {
+  padding: 10px 14px;
+  border-left: var(--b-border-thin);
+}
+
+.tpl-brutalist .wf-label {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-red);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tpl-brutalist .wf-text {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* ─── ENTRY (work / education 通用) ─── */
+.tpl-brutalist .entry {
+  margin-bottom: 16px;
+  page-break-inside: avoid;
+}
+
+.tpl-brutalist .entry:last-child {
+  margin-bottom: 0;
+}
+
+.tpl-brutalist .entry-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1.5px solid var(--b-black);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .entry-name {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tpl-brutalist .entry-date {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  color: var(--b-gray);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.tpl-brutalist .entry-summary {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.tpl-brutalist .entry-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tpl-brutalist .entry-points li {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #444;
+  padding-left: 14px;
+  position: relative;
+}
+
+.tpl-brutalist .entry-points li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--b-red);
+}
+
+/* ─── SIDEBAR ─── */
+.tpl-brutalist .sidebar-section {
+  border-bottom: var(--b-border);
+  padding: 24px 28px;
+}
+
+.tpl-brutalist .sidebar-section:last-child {
+  border-bottom: none;
+}
+
+.tpl-brutalist .sb-title {
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.05em;
+  border-bottom: var(--b-border-thin);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+/* 要求对标 */
+.tpl-brutalist .match-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tpl-brutalist .match-item {
+  border: var(--b-border-thin);
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+
+.tpl-brutalist .match-head {
+  background: var(--b-black);
+  color: var(--b-yellow);
+  padding: 5px 10px;
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tpl-brutalist .match-body {
+  padding: 8px 10px;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* 基本信息 */
+.tpl-brutalist .info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tpl-brutalist .info-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.tpl-brutalist .info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tpl-brutalist .info-k {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--b-gray);
+  min-width: 48px;
+  flex-shrink: 0;
+}
+
+.tpl-brutalist .info-v {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--b-black);
+}
+
+.tpl-brutalist .info-v.red {
+  color: var(--b-red);
+}
+
+/* 领域标签 */
+.tpl-brutalist .domain-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tpl-brutalist .domain-tag {
+  border: var(--b-border-thin);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tpl-brutalist .domain-tag-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.tpl-brutalist .domain-tag-text {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tpl-brutalist .domain-tag-sub {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--b-gray);
+}
+
+/* 专利 */
+.tpl-brutalist .patent-card {
+  border: var(--b-border);
+  background: var(--b-black);
+  color: var(--b-white);
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.tpl-brutalist .patent-card:last-child {
+  margin-bottom: 0;
+}
+
+.tpl-brutalist .patent-card-label {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--b-yellow);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .patent-card-title {
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--b-white);
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .patent-status {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--b-yellow);
+  border: 1px solid var(--b-yellow);
+  display: inline-block;
+  padding: 2px 7px;
+}
+
+/* 社区 */
+.tpl-brutalist .community-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: var(--b-border-thin);
+  padding: 10px 12px;
+  text-decoration: none;
+  color: var(--b-black);
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .community-row:last-child {
+  margin-bottom: 0;
+}
+
+.tpl-brutalist .community-platform {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--b-gray);
+  min-width: 60px;
+}
+
+.tpl-brutalist .community-handle {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tpl-brutalist .community-url {
+  margin-left: auto;
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--b-gray);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+/* 奖项简单列表 */
+.tpl-brutalist .award-row {
+  border: var(--b-border-thin);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.tpl-brutalist .award-row:last-child {
+  margin-bottom: 0;
+}
+
+.tpl-brutalist .award-title {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tpl-brutalist .award-meta {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 9px;
+  color: var(--b-gray);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ─── FOOTER ─── */
+.tpl-brutalist .footer {
+  background: var(--b-black);
+  border-top: var(--b-border-thick);
+  padding: 16px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tpl-brutalist .footer-l {
+  font-family: 'Space Mono', 'Noto Sans SC', monospace;
+  font-size: 10px;
+  color: var(--b-gray);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tpl-brutalist .footer-r {
+  font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  color: var(--b-yellow);
+}
+
+/* ─── PRINT ─── */
+@media print {
+  .tpl-brutalist {
+    background: white;
+  }
+  .tpl-brutalist .page {
+    border-left: var(--b-border-thick);
+    border-right: var(--b-border-thick);
+  }
+}
+
+@media (max-width: 720px) {
+  .tpl-brutalist .header {
+    grid-template-columns: 1fr;
+  }
+  .tpl-brutalist .header-left {
+    border-right: none;
+    border-bottom: var(--b-border-thick);
+  }
+  .tpl-brutalist .body-grid {
+    grid-template-columns: 1fr;
+  }
+  .tpl-brutalist .col-main {
+    border-right: none;
+  }
+  .tpl-brutalist .name {
+    font-size: 72px;
+  }
+}
+
+/* ─── 单页 PDF 导出：紧凑布局，让内容更接近 A4 宽高比，减少留白 ─── */
+.export-single .tpl-brutalist .page {
+  max-width: none;
+}
+.export-single .tpl-brutalist .name {
+  font-size: 60px;
+}
+.export-single .tpl-brutalist .header-left,
+.export-single .tpl-brutalist .header-right {
+  padding: 20px 26px;
+}
+.export-single .tpl-brutalist .section {
+  padding: 14px 26px;
+}
+.export-single .tpl-brutalist .sec-num {
+  font-size: 28px;
+}
+.export-single .tpl-brutalist .sec-title {
+  font-size: 19px;
+}
+.export-single .tpl-brutalist .sec-head {
+  margin-bottom: 10px;
+}
+.export-single .tpl-brutalist .sidebar-section {
+  padding: 14px 20px;
+}
+.export-single .tpl-brutalist .pride-block {
+  margin-top: 14px;
+  padding: 9px 11px;
+}
+.export-single .tpl-brutalist .project-card {
+  margin-bottom: 8px;
+}
+.export-single .tpl-brutalist .project-inner {
+  padding: 9px 13px 9px 17px;
+}
+.export-single .tpl-brutalist .project-points,
+.export-single .tpl-brutalist .entry-points {
+  gap: 2px;
+  padding-top: 6px;
+}
+.export-single .tpl-brutalist .entry {
+  margin-bottom: 10px;
+}
+.export-single .tpl-brutalist .skill-row {
+  grid-template-columns: 130px 1fr;
+}
+.export-single .tpl-brutalist .footer {
+  padding: 10px 26px;
+}
+.export-single .tpl-brutalist .body-grid {
+  grid-template-columns: 1fr 240px;
+}
+.export-single .tpl-brutalist .skill-val,
+.export-single .tpl-brutalist .project-desc,
+.export-single .tpl-brutalist .project-points li,
+.export-single .tpl-brutalist .entry-points li,
+.export-single .tpl-brutalist .entry-summary,
+.export-single .tpl-brutalist .wf-text {
+  line-height: 1.45;
+}
+
+
