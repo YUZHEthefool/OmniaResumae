@@ -178,7 +178,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
           {exporting ? '生成中…' : t('export', locale)} ▾
         </button>
         {menu === 'export' && (
-          <Dropdown>
+          <Dropdown align="right">
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => doExport('single')}>
               单页 PDF（缩放到一页 A4）
             </button>
@@ -218,9 +218,9 @@ function IconBtn({ children, onClick, title }: { children: React.ReactNode; onCl
   )
 }
 
-function Dropdown({ children }: { children: React.ReactNode }) {
+function Dropdown({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (
-    <div className="absolute left-0 top-full mt-1 min-w-[180px] bg-white border border-chrome-border rounded shadow-lg p-1 z-50">
+    <div className={clsx('absolute top-full mt-1 min-w-[200px] bg-white border border-chrome-border rounded shadow-lg p-1 z-50', align === 'right' ? 'right-0' : 'left-0')}>
       {children}
     </div>
   )
