@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{姓名}} — 简历</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@400;700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --black: #0A0A0A;
+      --white: #F4F1E8;
+      --yellow: #FFE500;
+      --red: #FF2200;
+      --gray: #999;
+      --light: #E8E4D8;
+      --border: 3px solid var(--black);
+      --border-thick: 6px solid var(--black);
+      --border-thin: 1.5px solid var(--black);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 17px;
+    }
+
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      border-left: var(--border-thick);
+      border-right: var(--border-thick);
+    }
+
+    /* ─── HEADER ─── */
+    .header {
+      border-bottom: var(--border-thick);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .header-left {
+      padding: 40px 36px 36px;
+      border-right: var(--border-thick);
+    }
+
+    .chip {
+      display: inline-block;
+      background: var(--black);
+      color: var(--yellow);
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      margin-bottom: 14px;
+    }
+
+    .name {
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 96px;
+      line-height: .88;
+      letter-spacing: -.01em;
+      display: block;
+    }
+
+    .name-sub {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-top: 10px;
+      display: block;
+    }
+
+    .pride-block {
+      margin-top: 22px;
+      border: var(--border);
+      padding: 12px 14px;
+      background: var(--yellow);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .pride-label {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--black);
+      white-space: nowrap;
+      margin-top: 2px;
+      border-right: 1.5px solid var(--black);
+      padding-right: 10px;
+      min-width: 56px;
+    }
+
+    .pride-text {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--black);
+      line-height: 1.55;
+    }
+
+    .header-right {
+      padding: 40px 36px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .meta-group {
+      border-bottom: var(--border-thin);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .meta-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .meta-label {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .meta-value {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--black);
+      line-height: 1.5;
+    }
+
+    .meta-value.red {
+      color: var(--red);
+    }
+
+    /* ─── DIVIDER BAR ─── */
+    .divider-bar {
+      background: var(--black);
+      border-bottom: var(--border-thick);
+      padding: 8px 36px;
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .divider-bar span {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--yellow);
+    }
+
+    .divider-sep {
+      color: rgba(255, 229, 0, .3) !important;
+    }
+
+    /* ─── BODY GRID ─── */
+    .body-grid {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      border-bottom: var(--border-thick);
+    }
+
+    .col-main {
+      border-right: var(--border-thick);
+    }
+
+    /* ─── SECTION ─── */
+    .section {
+      border-bottom: var(--border);
+      padding: 28px 36px;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .sec-head {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .sec-num {
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 40px;
+      line-height: 1;
+      color: var(--yellow);
+      -webkit-text-stroke: 1.5px var(--black);
+    }
+
+    .sec-title {
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 24px;
+      letter-spacing: .05em;
+    }
+
+    /* ─── SKILL TABLE ─── */
+    .skill-table {
+      border: var(--border);
+      width: 100%;
+    }
+
+    .skill-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      border-bottom: var(--border-thin);
+    }
+
+    .skill-row:last-child {
+      border-bottom: none;
+    }
+
+    .skill-key {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--black);
+      background: var(--light);
+      padding: 10px 12px;
+      border-right: var(--border-thin);
+      display: flex;
+      align-items: flex-start;
+      line-height: 1.45;
+    }
+
+    .skill-val {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14px;
+      line-height: 1.65;
+      padding: 10px 14px;
+      color: #222;
+    }
+
+    /* ─── PROJECT CARD ─── */
+    .project-card {
+      border: var(--border);
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .project-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--yellow);
+    }
+
+    .project-card.dev::before {
+      background: var(--red);
+    }
+
+    .project-card.pat::before {
+      background: var(--black);
+    }
+
+    .project-inner {
+      padding: 14px 16px 14px 21px;
+    }
+
+    .project-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .project-name {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .badge {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border: 1.5px solid var(--black);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge.oss {
+      background: var(--yellow);
+    }
+
+    .badge.dev {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .badge.pat {
+      background: var(--black);
+      color: var(--yellow);
+    }
+
+    .project-desc {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .project-points {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-top: 1px solid #d8d4c8;
+      padding-top: 8px;
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .project-points li {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13px;
+      line-height: 1.55;
+      color: #444;
+      padding-left: 14px;
+      position: relative;
+    }
+
+    .project-points li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 10px;
+      color: var(--red);
+    }
+
+    .project-link {
+      display: inline-block;
+      margin-top: 8px;
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--black);
+      text-decoration: none;
+      border-bottom: 1.5px solid var(--black);
+    }
+
+    /* ─── WORKFLOW ─── */
+    .workflow {
+      border: var(--border);
+    }
+
+    .wf-step {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      border-bottom: var(--border-thin);
+    }
+
+    .wf-step:last-child {
+      border-bottom: none;
+    }
+
+    .wf-num {
+      background: var(--black);
+      color: var(--yellow);
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 22px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 0;
+    }
+
+    .wf-body {
+      padding: 10px 14px;
+      border-left: var(--border-thin);
+    }
+
+    .wf-label {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--red);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .wf-text {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar-section {
+      border-bottom: var(--border);
+      padding: 24px 28px;
+    }
+
+    .sidebar-section:last-child {
+      border-bottom: none;
+    }
+
+    .sb-title {
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 20px;
+      letter-spacing: .05em;
+      border-bottom: var(--border-thin);
+      padding-bottom: 8px;
+      margin-bottom: 14px;
+    }
+
+    /* 要求对标 */
+    .match-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .match-item {
+      border: var(--border-thin);
+      overflow: hidden;
+    }
+
+    .match-head {
+      background: var(--black);
+      color: var(--yellow);
+      padding: 5px 10px;
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .match-body {
+      padding: 8px 10px;
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    /* 基本信息 */
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 8px;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .info-k {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--gray);
+      min-width: 48px;
+      flex-shrink: 0;
+    }
+
+    .info-v {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .info-v.red {
+      color: var(--red);
+    }
+
+    /* 领域标签 */
+    .domain-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .domain-tag {
+      border: var(--border-thin);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .domain-tag-icon {
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .domain-tag-text {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .domain-tag-sub {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--gray);
+    }
+
+    /* 专利 */
+    .patent-card {
+      border: var(--border);
+      background: var(--black);
+      color: var(--white);
+      padding: 14px;
+    }
+
+    .patent-card-label {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .patent-card-title {
+      font-family: 'Noto Sans SC', sans-serif;
+      font-size: 13.5px;
+      font-weight: 700;
+      line-height: 1.6;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .patent-status {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--yellow);
+      border: 1px solid var(--yellow);
+      display: inline-block;
+      padding: 2px 7px;
+    }
+
+    /* 社区 */
+    .community-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: var(--border-thin);
+      padding: 10px 12px;
+      text-decoration: none;
+      color: var(--black);
+    }
+
+    .community-platform {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--gray);
+      min-width: 60px;
+    }
+
+    .community-handle {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      background: var(--black);
+      border-top: var(--border-thick);
+      padding: 16px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-l {
+      font-family: 'Space Mono', 'Noto Sans SC', monospace;
+      font-size: 10px;
+      color: var(--gray);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .footer-r {
+      font-family: 'Bebas Neue', 'Noto Sans SC', sans-serif;
+      font-size: 20px;
+      letter-spacing: .1em;
+      color: var(--yellow);
+    }
+
+    /* ─── PRINT ─── */
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        border-left: var(--border-thick);
+        border-right: var(--border-thick);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .header {
+        grid-template-columns: 1fr;
+      }
+
+      .header-left {
+        border-right: none;
+        border-bottom: var(--border-thick);
+      }
+
+      .body-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .col-main {
+        border-right: none;
+      }
+
+      .name {
+        font-size: 72px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+
+    <!-- ═══ HEADER ═══ -->
+    <header class="header">
+      <div class="header-left">
+        <span class="chip">简历 / Resume</span>
+        <!-- 姓名（中文） -->
+        <span class="name">{{姓名}}</span>
+        <!-- 姓名拼音（大写） -->
+        <span class="name-sub">{{XING MING}}</span>
+        <div class="pride-block">
+          <span class="pride-label">引以为傲</span>
+          <!-- 一句话核心优势 -->
+          <span class="pride-text">{{核心优势描述}}</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="meta-group">
+          <span class="meta-label">学历 / 专业</span>
+          <!-- 示例：本科 · 计算机科学与技术 -->
+          <span class="meta-value">{{学历}} · {{专业}}</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">申请岗位</span>
+          <span class="meta-value red">{{目标岗位}}</span>
+        </div>
+        <!-- 以下条目可按需保留或删除 -->
+        <div class="meta-group">
+          <span class="meta-label">专利</span>
+          <span class="meta-value">{{专利名称（可选）}}</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">开源项目</span>
+          <span class="meta-value">{{github.com/组织/项目名（可选）}}</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">社区</span>
+          <span class="meta-value">{{平台}} · {{@handle（可选）}}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── 标签栏：核心技能/关键词，可增删 ─── -->
+    <div class="divider-bar">
+      <span>{{关键词1}}</span>
+      <span class="divider-sep">·</span>
+      <span>{{关键词2}}</span>
+      <span class="divider-sep">·</span>
+      <span>{{关键词3}}</span>
+      <span class="divider-sep">·</span>
+      <span>{{关键词4}}</span>
+      <span class="divider-sep">·</span>
+      <span>{{关键词5}}</span>
+    </div>
+
+    <!-- ═══ BODY ═══ -->
+    <div class="body-grid">
+
+      <!-- ─── 主栏 ─── -->
+      <div class="col-main">
+
+        <!-- 01 能力 -->
+        <div class="section">
+          <div class="sec-head">
+            <span class="sec-num">01</span>
+            <span class="sec-title">能力与理解</span>
+          </div>
+          <div class="skill-table">
+            <!-- 每个 skill-row 对应一项技能；skill-key 为技能名，skill-val 为说明 -->
+            <div class="skill-row">
+              <span class="skill-key">{{技能名1}}</span>
+              <span class="skill-val">{{技能说明1}}</span>
+            </div>
+            <div class="skill-row">
+              <span class="skill-key">{{技能名2}}</span>
+              <span class="skill-val">{{技能说明2}}</span>
+            </div>
+            <div class="skill-row">
+              <span class="skill-key">{{技能名3}}</span>
+              <span class="skill-val">{{技能说明3}}</span>
+            </div>
+            <div class="skill-row">
+              <span class="skill-key">{{技能名4}}</span>
+              <span class="skill-val">{{技能说明4}}</span>
+            </div>
+            <div class="skill-row">
+              <span class="skill-key">{{技能名5}}</span>
+              <span class="skill-val">{{技能说明5}}</span>
+            </div>
+            <div class="skill-row">
+              <span class="skill-key">{{技能名6}}</span>
+              <span class="skill-val">{{技能说明6}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 02 项目 -->
+        <div class="section">
+          <div class="sec-head">
+            <span class="sec-num">02</span>
+            <!-- 可改为"开发项目"、"工作经历"等 -->
+            <span class="sec-title">开发项目 · 专利</span>
+          </div>
+
+          <!-- 开源项目卡片（黄色左边条） -->
+          <div class="project-card oss">
+            <div class="project-inner">
+              <div class="project-head">
+                <span class="project-name">{{项目名称1}}</span>
+                <span class="badge oss">Open Source</span>
+              </div>
+              <p class="project-desc">
+                {{项目一句话描述}}
+              </p>
+              <ul class="project-points">
+                <li>{{亮点1}}</li>
+                <li>{{亮点2}}</li>
+              </ul>
+              <!-- 如无链接可删除此行 -->
+              <a class="project-link" href="{{项目URL}}">{{项目URL显示文本}}</a>
+            </div>
+          </div>
+
+          <!-- 开发中项目卡片（红色左边条） -->
+          <div class="project-card dev">
+            <div class="project-inner">
+              <div class="project-head">
+                <span class="project-name">{{项目名称2}}</span>
+                <span class="badge dev">开发中</span>
+              </div>
+              <p class="project-desc">
+                {{项目一句话描述}}
+              </p>
+              <ul class="project-points">
+                <li>{{亮点1}}</li>
+                <li>{{亮点2}}</li>
+                <li>{{亮点3}}</li>
+                <li>{{亮点4}}</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 专利卡片（黑色左边条）；无专利可删除 -->
+          <div class="project-card pat">
+            <div class="project-inner">
+              <div class="project-head">
+                <span class="project-name">{{专利/项目名称3}}</span>
+                <span class="badge pat">专利申请中</span>
+              </div>
+              <p class="project-desc">
+                发明名称：<strong>{{完整发明名称}}</strong>。{{一句话目标说明}}
+              </p>
+              <ul class="project-points">
+                <li>{{核心设计点1}}</li>
+                <li>{{核心设计点2}}</li>
+                <li>{{核心设计点3}}</li>
+                <li>{{核心设计点4}}</li>
+                <li>{{核心设计点5}}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- 03 工作流 / 方法论 -->
+        <div class="section">
+          <div class="sec-head">
+            <span class="sec-num">03</span>
+            <span class="sec-title">{{工作流 / 方法论标题}}</span>
+          </div>
+          <div class="workflow">
+            <!-- 每个 wf-step 为一个步骤；可增删 -->
+            <div class="wf-step">
+              <span class="wf-num">1</span>
+              <div class="wf-body">
+                <span class="wf-label">{{步骤标签1}}</span>
+                <span class="wf-text">{{步骤详细说明1}}</span>
+              </div>
+            </div>
+            <div class="wf-step">
+              <span class="wf-num">2</span>
+              <div class="wf-body">
+                <span class="wf-label">{{步骤标签2}}</span>
+                <span class="wf-text">{{步骤详细说明2}}</span>
+              </div>
+            </div>
+            <div class="wf-step">
+              <span class="wf-num">3</span>
+              <div class="wf-body">
+                <span class="wf-label">{{步骤标签3}}</span>
+                <span class="wf-text">{{步骤详细说明3}}</span>
+              </div>
+            </div>
+            <div class="wf-step">
+              <span class="wf-num">4</span>
+              <div class="wf-body">
+                <span class="wf-label">{{步骤标签4}}</span>
+                <span class="wf-text">{{步骤详细说明4}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /col-main -->
+
+      <!-- ─── 侧栏 ─── -->
+      <aside>
+
+        <!-- 基本信息 -->
+        <div class="sidebar-section">
+          <div class="sb-title">基本信息</div>
+          <div class="info-list">
+            <div class="info-row">
+              <span class="info-k">学历</span>
+              <span class="info-v">{{学历}}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">专业</span>
+              <span class="info-v">{{专业}}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-k">岗位</span>
+              <span class="info-v red">{{目标岗位}}</span>
+            </div>
+            <!-- 可按需添加更多行，如联系方式、所在城市等 -->
+          </div>
+        </div>
+
+        <!-- 招聘要求匹配；可改标题或删除整块 -->
+        <div class="sidebar-section">
+          <div class="sb-title">招聘要求匹配</div>
+          <div class="match-list">
+            <!-- 每个 match-item 对应一条招聘要求 -->
+            <div class="match-item">
+              <div class="match-head">{{要求标签1}}</div>
+              <div class="match-body">{{对应的自我匹配说明1}}</div>
+            </div>
+            <div class="match-item">
+              <div class="match-head">{{要求标签2}}</div>
+              <div class="match-body">{{对应的自我匹配说明2}}</div>
+            </div>
+            <div class="match-item">
+              <div class="match-head">{{要求标签3}}</div>
+              <div class="match-body">{{对应的自我匹配说明3}}</div>
+            </div>
+            <div class="match-item">
+              <div class="match-head">{{要求标签4}}</div>
+              <div class="match-body">{{对应的自我匹配说明4}}</div>
+            </div>
+            <div class="match-item">
+              <div class="match-head">{{要求标签5}}</div>
+              <div class="match-body">{{对应的自我匹配说明5}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 涉足领域 -->
+        <div class="sidebar-section">
+          <div class="sb-title">涉足领域</div>
+          <div class="domain-tags">
+            <!-- emoji + 领域名 + 副标题；可增删 -->
+            <div class="domain-tag">
+              <span class="domain-tag-icon">{{emoji1}}</span>
+              <div>
+                <div class="domain-tag-text">{{领域名1}}</div>
+                <div class="domain-tag-sub">{{领域副标题1}}</div>
+              </div>
+            </div>
+            <div class="domain-tag">
+              <span class="domain-tag-icon">{{emoji2}}</span>
+              <div>
+                <div class="domain-tag-text">{{领域名2}}</div>
+                <div class="domain-tag-sub">{{领域副标题2}}</div>
+              </div>
+            </div>
+            <div class="domain-tag">
+              <span class="domain-tag-icon">{{emoji3}}</span>
+              <div>
+                <div class="domain-tag-text">{{领域名3}}</div>
+                <div class="domain-tag-sub">{{领域副标题3}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 专利；无专利可删除整块 -->
+        <div class="sidebar-section">
+          <div class="sb-title">专利</div>
+          <div class="patent-card">
+            <span class="patent-card-label">Patent Pending</span>
+            <p class="patent-card-title">{{专利全称}}</p>
+            <span class="patent-status">审批进行中</span>
+          </div>
+        </div>
+
+        <!-- 社区；可添加多行或删除整块 -->
+        <div class="sidebar-section">
+          <div class="sb-title">社区</div>
+          <a class="community-row" href="{{社区个人页URL}}">
+            <span class="community-platform">{{平台名}}</span>
+            <span class="community-handle">{{@handle}}</span>
+          </a>
+        </div>
+
+      </aside>
+
+    </div><!-- /body-grid -->
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="footer">
+      <!-- 页脚左侧：简短信息摘要 -->
+      <span class="footer-l">{{姓名}} · {{专业}} · {{目标岗位}}岗</span>
+      <!-- 页脚右侧：姓名拼音 -->
+      <span class="footer-r">{{XING MING}}</span>
+    </footer>
+
+  </div>
+</body>
+
+</html>
