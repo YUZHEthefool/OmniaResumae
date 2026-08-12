@@ -390,7 +390,6 @@ function DomainTags({ items, locale }: { items: DomainItem[]; locale: Locale }) 
     <div className="domain-tags">
       {items.map((d) => (
         <div className="domain-tag" key={d.id}>
-          {d.icon && <span className="domain-tag-icon">{d.icon}</span>}
           <div>
             <div className="domain-tag-text">{L(d.name, locale)}</div>
             {L(d.sub, locale) && <div className="domain-tag-sub">{L(d.sub, locale)}</div>}

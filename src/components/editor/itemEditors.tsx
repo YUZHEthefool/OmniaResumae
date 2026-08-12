@@ -209,12 +209,11 @@ export function MatchEditor({ item, update }: { item: MatchItem; update: Updater
 export function DomainEditor({ item, update }: { item: DomainItem; update: Updater<DomainItem> }) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      <Field label="Emoji">
-        <TextInput value={item.icon} onChange={(v) => update({ icon: v })} placeholder="🐙" />
-      </Field>
-      <Field label="领域名">
-        <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
-      </Field>
+      <div className="col-span-2">
+        <Field label="领域名">
+          <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
+        </Field>
+      </div>
       <div className="col-span-2">
         <Field label="副标题">
           <LocalizedInput value={item.sub} onChange={(v) => update({ sub: v })} />

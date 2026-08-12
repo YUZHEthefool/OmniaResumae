@@ -183,7 +183,6 @@ function renderSide(section: Section, locale: Locale) {
       if (!(section.items as DomainItem[]).length) return <div className="empty">—</div>
       return <>{(section.items as DomainItem[]).map((d) => (
         <div className="domain" key={d.id}>
-          {d.icon && <span className="domain-icon">{d.icon}</span>}
           <div>
             <div>{L(d.name, locale)}</div>
             {L(d.sub, locale) && <div className="domain-sub">{L(d.sub, locale)}</div>}
