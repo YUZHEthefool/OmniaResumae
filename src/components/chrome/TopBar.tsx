@@ -14,7 +14,7 @@ import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { AIDialog } from '@/ai/AIDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { t } from '@/i18n'
-import { Github } from 'lucide-react'
+import { Github, Sparkles } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -23,6 +23,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const setTemplate = useUIStore((s) => s.setTemplate)
   const zoom = useUIStore((s) => s.zoom)
   const setZoom = useUIStore((s) => s.setZoom)
+  const copilotOpen = useUIStore((s) => s.copilotOpen)
+  const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
 
   const current = useResumeStore((s) => s.current)
   const list = useResumeStore((s) => s.list)
@@ -163,6 +165,17 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {/* 后续 Phase 占位 */}
       <button className={btnClsGhost} title={t('import', locale)} onClick={() => setDialog('import')}>{t('import', locale)}</button>
       <button className={btnClsGhost} title={t('github', locale)} onClick={() => setDialog('github')}>{t('github', locale)}</button>
+      {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
+      <button
+        className={clsx(
+          'w-7 h-7 flex items-center justify-center rounded',
+          copilotOpen ? 'bg-chrome-ink text-white' : 'text-chrome-muted hover:bg-chrome-bg',
+        )}
+        title={t('copilot', locale)}
+        onClick={() => setCopilotOpen(!copilotOpen)}
+      >
+        <Sparkles size={16} />
+      </button>
       <button className={btnClsGhost} title={t('ai', locale)} onClick={() => setDialog('ai')}>{t('ai', locale)}</button>
       <button className={btnClsGhost} title={t('settings', locale)} onClick={() => setDialog('settings')}>{t('settings', locale)}</button>
 

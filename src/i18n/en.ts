@@ -59,4 +59,19 @@ export const en: Dict = {
   emptyHint: 'Fill the form on the left; preview updates live',
 
   comingSoon: 'This feature arrives in a later phase',
+
+  // AI Copilot right panel
+  copilot: 'AI Generate',
+  copilotPromptLabel: 'Describe the resume you want',
+  copilotPromptPlaceholder: 'e.g. 3-yr backend engineer, Go/microservices, built an e-commerce order system, targeting ByteDance backend roles',
+  copilotSourceLabel: 'Existing material (optional, keep facts)',
+  copilotSourceHint: 'Paste old resume text, or upload .md/.txt/.tex/.pdf',
+  copilotGenerate: 'Generate',
+  copilotGenerating: 'Generating…',
+  copilotPreviewTitle: 'Generated, preview',
+  copilotNewDoc: 'New resume',
+  copilotOverwrite: 'Overwrite current',
+  copilotNoKey: 'Configure an AI API key in Settings first',
+  copilotNoInput: 'Enter a description or provide existing material',
+  copilotImportFile: 'Upload file',
 }

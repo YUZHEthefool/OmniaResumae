@@ -5,6 +5,7 @@
  *       失败则报错而非静默写入脏数据。
  */
 import { z } from 'zod'
+import type { Resume, SectionType } from '@/types/resume'
 
 export const LocalizedSchema = z.object({
   zh: z.string().optional(),
@@ -173,4 +174,35 @@ export const TranslateProposalSchema = z.object({
 /** 校验并 parse；失败抛 ZodError，调用方应捕获并提示用户 */
 export function validateResume(data: unknown) {
   return ResumeSchema.parse(data)
+}
+
+/* ───────── AI 全量简历校验 ───────── */
+// SectionSchema.items 是 z.unknown()[]，不校验条目形状；这里按 section.type 分发到对应条目 schema。
+const ITEM_SCHEMAS: Partial<Record<SectionType, z.ZodTypeAny>> = {
+  skills: SkillItemSchema,
+  projects: ProjectItemSchema,
+  work: WorkItemSchema,
+  education: EducationItemSchema,
+  awards: AwardItemSchema,
+  publications: PublicationItemSchema,
+  matches: MatchItemSchema,
+  domains: DomainItemSchema,
+  workflow: WorkflowStepSchema,
+  community: CommunityItemSchema,
+  // custom 不列 → 原样保留
+}
+
+/**
+ * 加固 AI 生成的完整 Resume：先校验骨架（失败即抛），再按 section.type 逐条目 safeParse。
+ * 单条目畸形则丢弃该条目、保留其余（生成器可能产 10+ 段落，一条坏的不该毁掉整份提案）。
+ */
+export function validateAIResume(data: unknown): Resume {
+  const skeleton = ResumeSchema.parse(data) as Resume
+  const sections = skeleton.sections.map((sec) => {
+    const schema = ITEM_SCHEMAS[sec.type]
+    if (!schema) return sec
+    const valid = (sec.items as unknown[]).filter((it) => schema.safeParse(it).success)
+    return { ...sec, items: valid as never[] }
+  })
+  return { ...skeleton, sections }
 }

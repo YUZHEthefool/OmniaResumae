@@ -13,10 +13,12 @@ interface UIState {
   templateId: string
   zoom: number
   panelRatio: number // 左侧占比 0.2~0.8
+  copilotOpen: boolean // AI Copilot 右侧面板是否展开（默认收起，按需点开）
   setLocale: (l: Locale) => void
   setTemplate: (id: string) => void
   setZoom: (z: number) => void
   setPanelRatio: (r: number) => void
+  setCopilotOpen: (v: boolean) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -24,9 +26,11 @@ export const useUIStore = create<UIState>((set) => ({
   templateId: 'brutalist',
   zoom: 0.85,
   panelRatio: 0.42,
+  copilotOpen: false,
   setLocale: (locale) => set({ locale }),
   setTemplate: (templateId) => set({ templateId }),
   setZoom: (zoom) => set({ zoom: Math.max(0.4, Math.min(1.5, zoom)) }),
   setPanelRatio: (panelRatio) =>
     set({ panelRatio: Math.max(0.2, Math.min(0.8, panelRatio)) }),
+  setCopilotOpen: (copilotOpen) => set({ copilotOpen }),
 }))
