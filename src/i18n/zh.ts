@@ -63,20 +63,34 @@ export const zh = {
   // 占位（导入/GitHub/AI 后续 Phase 实现）
   comingSoon: '该功能将在后续阶段实现',
 
-  // AI Copilot 右侧面板
-  copilot: 'AI 生成',
-  copilotPromptLabel: '描述你想要的简历',
-  copilotPromptPlaceholder: '例如：3 年后端工程师，Go/微服务，做过电商订单系统，想找字节后端岗位',
-  copilotSourceLabel: '已有材料（可选，忠于事实）',
-  copilotSourceHint: '可粘贴旧简历文本，或上传 .md/.txt/.tex/.pdf',
-  copilotGenerate: '生成简历',
-  copilotGenerating: '生成中…',
-  copilotPreviewTitle: '已生成，预览',
-  copilotNewDoc: '新建简历',
-  copilotOverwrite: '覆盖当前',
+  // AI Copilot 右侧面板（对话式 agent）
+  copilot: 'AI 助手',
   copilotNoKey: '请先在「设置」配置 AI 密钥',
-  copilotNoInput: '请输入描述或提供已有材料',
-  copilotImportFile: '上传文件',
+  copilotChatPlaceholder: '描述需求或精修当前简历，Enter 发送',
+  copilotSend: '发送',
+  copilotStop: '停止',
+  copilotStopped: '已停止',
+  copilotNewResume: '新建简历',
+  copilotUndoTurn: '撤销本轮',
+  copilotClearChat: '清空对话',
+  copilotAttach: '附材料',
+  copilotEmptyNew: '已新建空简历，可从零生成',
+  copilotToolCall: '工具调用',
+  copilotThinking: '思考…',
+  copilotDone: '完成',
+  quickOptimize: '优化润色',
+  quickTailor: '目标包装',
+  quickTranslate: '翻译',
+  quickActions: '快捷动作',
+
+  // Skill
+  skill: '技能',
+  skillNone: '无',
+  skillImport: '导入 skill',
+  skillImportFail: 'skill 格式错误',
+  skillDelete: '删除 skill',
+  skillBuiltin: '内置',
+  skillUser: '我的',
 }
 
 export type Dict = typeof zh
