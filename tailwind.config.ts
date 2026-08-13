@@ -6,14 +6,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 编辑器 UI 主色（中性）
+        // 编辑器 UI 主色（CSS 变量驱动，html.dark 覆盖为深灰）
         chrome: {
-          bg: '#f6f6f4',
-          panel: '#ffffff',
-          border: '#e4e4e0',
-          ink: '#1a1a1a',
-          muted: '#8a8a86',
-          accent: '#111111',
+          bg: 'var(--chrome-bg)',
+          panel: 'var(--chrome-panel)',
+          border: 'var(--chrome-border)',
+          ink: 'var(--chrome-ink)',
+          muted: 'var(--chrome-muted)',
+          accent: 'var(--chrome-accent)',
+        },
+        // AI Copilot 面板专用深色主题（与浅色编辑器对比，类 VSCode 侧栏）
+        copilot: {
+          bg: '#0f0f12',
+          surface: '#1a1a1f',
+          surface2: '#24242b',
+          border: '#2e2e36',
+          ink: '#ececf1',
+          muted: '#8e8e98',
+          dim: '#6b6b75',
+          accent: '#a78bfa',
+          accentSoft: '#3a2e5a',
         },
       },
       fontFamily: {

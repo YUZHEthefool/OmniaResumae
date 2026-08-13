@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── chrome 主题变量（浅色默认；html.dark 覆盖为深灰） ── */
+:root {
+  --chrome-bg: #f6f6f4;
+  --chrome-panel: #ffffff;
+  --chrome-border: #e4e4e0;
+  --chrome-ink: #1a1a1a;
+  --chrome-muted: #8a8a86;
+  --chrome-accent: #111111;
+}
+html.dark {
+  --chrome-bg: #26262b;
+  --chrome-panel: #2f2f35;
+  --chrome-border: #3f3f46;
+  --chrome-ink: #e4e4e7;
+  --chrome-muted: #9a9aa2;
+  --chrome-accent: #e4e4e7;
+}
+
+/* ── 深色模式：把散落的硬编码白色背景映射到 chrome panel（不动 text-white，避免误伤 copilot 深色面板） ── */
+html.dark .bg-white {
+  background-color: var(--chrome-panel);
+}
+html.dark .hover\:bg-black:hover {
+  background-color: var(--chrome-ink);
+}
+html.dark .hover\:bg-chrome-bg:hover {
+  background-color: var(--chrome-bg);
+}
+
 /* ── 编辑器 chrome 基础 ── */
 html,
 body,
@@ -11,8 +40,8 @@ body,
 
 body {
   margin: 0;
-  background: #f6f6f4;
-  color: #1a1a1a;
+  background: var(--chrome-bg);
+  color: var(--chrome-ink);
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -24,11 +53,74 @@ body {
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #d4d4cf;
+  background: var(--chrome-border);
   border-radius: 6px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #b8b8b2;
+  background: var(--chrome-muted);
 }
 
 /* 自托管字体 @font-face 在各模板 CSS 内声明，确保模板独立可用 */
+
+/* ── Copilot 面板内 markdown 渲染 ── */
+.markdown-body {
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.markdown-body p { margin: 0 0 0.4em; }
+.markdown-body p:last-child { margin-bottom: 0; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+  line-height: 1.3;
+}
+.markdown-body h1 { font-size: 1.15em; }
+.markdown-body h2 { font-size: 1.05em; }
+.markdown-body h3, .markdown-body h4 { font-size: 1em; }
+.markdown-body ul, .markdown-body ol { margin: 0.3em 0; padding-left: 1.4em; }
+.markdown-body li { margin: 0.15em 0; }
+.markdown-body code {
+  font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+.markdown-body pre {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.4em 0;
+}
+.markdown-body pre code {
+  background: transparent;
+  padding: 0;
+  font-size: 0.85em;
+}
+.markdown-body blockquote {
+  border-left: 2px solid rgba(167, 139, 250, 0.4);
+  padding-left: 0.7em;
+  margin: 0.4em 0;
+  opacity: 0.85;
+}
+.markdown-body a {
+  color: #a78bfa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0.6em 0;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0.4em 0;
+  font-size: 0.9em;
+}
+.markdown-body th, .markdown-body td {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.25em 0.5em;
+}
