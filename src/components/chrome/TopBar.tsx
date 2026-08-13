@@ -8,7 +8,7 @@ import { clsx } from 'clsx'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { listTemplates } from '@/templates/registry'
-import { exportPDF, printResume } from '@/export/pdf'
+import { exportPDF, printResume, exportImage } from '@/export/pdf'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -65,6 +65,19 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     if (!current || !previewRef.current) return
     setMenu(null)
     printResume(previewRef.current, current, locale)
+  }
+  const doExportImage = async () => {
+    if (!current || !previewRef.current) return
+    setExporting(true)
+    setMenu(null)
+    try {
+      await exportImage(previewRef.current, current, locale)
+    } catch (e) {
+      console.error(e)
+      alert('导出失败：' + (e as Error).message)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -206,6 +219,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => doExport('multi')}>
               多页 PDF（按 A4 切片保真）
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportImage}>
+              导出图片（PNG）
             </button>
             <div className="border-t border-chrome-border my-1" />
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>

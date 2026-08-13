@@ -167,6 +167,66 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   pdf.save(`${name}_${locale}.pdf`)
 }
 
+/** 导出为 PNG 图片：离屏按 A4 宽渲染整张简历（含 .export-single 紧凑布局 + 头像预裁剪），canvas 直接出 PNG 下载。 */
+export async function exportImage(node: HTMLElement, resume: Resume, locale: Locale) {
+  const { default: html2canvas } = await import('html2canvas')
+  const A4_W_PX = 794
+  const scale = 2
+  const holder = document.createElement('div')
+  holder.style.position = 'fixed'
+  holder.style.left = '-10000px'
+  holder.style.top = '0'
+  holder.style.width = `${A4_W_PX}px`
+  holder.style.background = '#ffffff'
+  holder.style.zIndex = '-1'
+  holder.classList.add('export-single')
+  const clone = node.cloneNode(true) as HTMLElement
+  clone.style.transform = 'none'
+  clone.style.width = '100%'
+  holder.appendChild(clone)
+  document.body.appendChild(holder)
+
+  // 头像预裁剪（同 exportPDF，防 html2canvas object-fit 拉伸）
+  const origAvatar = node.querySelector<HTMLImageElement>('.avatar')
+  const cloneAvatars = Array.from(holder.querySelectorAll<HTMLImageElement>('.avatar'))
+  if (origAvatar && cloneAvatars.length) {
+    const squared = await squareCropAvatar(origAvatar)
+    if (squared) {
+      cloneAvatars.forEach((av) => {
+        av.src = squared
+        av.style.objectFit = 'fill'
+      })
+      await Promise.all(cloneAvatars.map(awaitImg))
+    }
+  }
+  await new Promise((r) => requestAnimationFrame(() => r(null)))
+
+  let canvas: HTMLCanvasElement
+  try {
+    canvas = await html2canvas(holder, {
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false,
+      windowWidth: A4_W_PX,
+    })
+  } finally {
+    document.body.removeChild(holder)
+  }
+
+  const name = slugify(pick(resume.basics.name, locale, 'resume'))
+  canvas.toBlob((blob) => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${name}_${locale}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, 'image/png')
+}
+
 /** 打印另存：打开隔离打印窗口（仅简历 DOM + 模板 CSS），调浏览器打印对话框 */
 export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
   const win = window.open('', '_blank', 'width=900,height=1200')
