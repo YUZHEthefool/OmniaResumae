@@ -1,188 +1,377 @@
 /**
- * AI Copilot 右侧停靠面板
- * 用户描述需求（可选附已有材料）→ AI 生成完整简历 → 预览 → 选择「新建简历 / 覆盖当前」填入。
- * 默认收起，由 TopBar 的 Sparkles 切换钮控制（uiStore.copilotOpen）。
- * 不自动写入：只有点填入按钮才写 store，守住「AI 产出是提案」不变量。
+ * AI Copilot 右侧对话面板
+ * 真实可观测 agent：用户对话 → agent 多轮工具调用实时编辑当前简历 → 编辑器/预览即时更新。
+ * 统一处理「从零生成」与「精修当前」。改动实时写 store，每轮可「撤销本轮」回退。
  */
-import { useRef, useState } from 'react'
-import { Sparkles, PanelRightClose, Upload, X } from 'lucide-react'
+import { useRef, useState, useEffect } from 'react'
+import { clsx } from 'clsx'
+import { Sparkles, PanelRightClose, Upload, X, Send, Square, Undo2, Plus, Eraser, Wrench, Paperclip, ChevronRight } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useResumeStore } from '@/store/resumeStore'
 import { useSettingsStore } from '@/store/settingsStore'
-import { generateResume } from '@/ai/generate'
+import { useSkillStore } from '@/store/skillStore'
+import { useChatStore } from '@/store/chatStore'
+import { getBuiltins } from '@/skills'
+import { runAgentStream, type AgentEvent } from '@/ai/agent'
+import { buildResumeTools } from '@/ai/tools'
 import { extractPdfText } from '@/importers/pdf'
+import { renderMarkdown } from '@/ai/markdown'
+import { OptimizeAction, TailorAction, TranslateAction } from '@/ai/quickActions'
 import { t } from '@/i18n'
 import { pick } from '@/types/resume'
-import type { Resume } from '@/types/resume'
+import type { Skill } from '@/skills/types'
+import type { ChatEntry } from '@/store/chatStore'
+
+let _entrySeq = 0
+const entryId = () => `chat_${++_entrySeq}`
 
 export function CopilotPanel() {
   const cfg = useSettingsStore((s) => s.ai)
   const locale = useUIStore((s) => s.locale)
   const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
+  const current = useResumeStore((s) => s.current)
   const create = useResumeStore((s) => s.create)
   const update = useResumeStore((s) => s.update)
 
-  const [prompt, setPrompt] = useState('')
-  const [sourceText, setSourceText] = useState('')
-  const [fileName, setFileName] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState('')
-  const [gen, setGen] = useState<Resume | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const userSkills = useSkillStore((s) => s.userSkills)
+  const selectedSkillId = useSkillStore((s) => s.selectedSkillId)
+  const setSelectedSkill = useSkillStore((s) => s.setSelectedSkill)
+  const removeSkill = useSkillStore((s) => s.removeSkill)
+  const importSkillFromText = useSkillStore((s) => s.importSkillFromText)
 
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const chatSessions = useChatStore((s) => s.sessions)
+  const getSession = useChatStore((s) => s.getSession)
+  const setSession = useChatStore((s) => s.setSession)
+  const clearSession = useChatStore((s) => s.clearSession)
+
+  const [input, setInput] = useState('')
+  const [running, setRunning] = useState(false)
+  const [quickMode, setQuickMode] = useState<null | 'optimize' | 'tailor' | 'translate'>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const skillFileRef = useRef<HTMLInputElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 对话按简历 id 绑定：切换简历自动加载/保留各自历史
+  const resumeId = current?.id ?? '__none__'
+  const session = chatSessions[resumeId] ?? getSession(resumeId)
+  const entries = session.entries
+  const messages = session.messages
+  const prevSnapshot = session.prevSnapshot
+
+  const builtins = getBuiltins()
+  const allSkills: Skill[] = [...builtins, ...userSkills]
+  const selectedSkill = allSkills.find((s) => s.id === selectedSkillId) ?? null
+
+  const isEmpty = !current || (!pick(current.basics.name, locale) && current.sections.every((s) => s.items.length === 0))
+
+  // transcript 自动滚底
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [entries.length])
+
+  // system 提示随 skill/locale 变化重建（历史保留）
+  const buildSystemPrompt = (): string => {
+    const lang = locale === 'zh' ? '中文' : 'English'
+    return `你是一名资深简历撰写助手，正在通过工具实时编辑用户当前打开的简历。
+【核心契约】
+- 每次改动通过工具立即生效到编辑器与预览，用户实时可见。不要一次性输出完整简历 JSON，不要使用 emit_resume。
+- 先调用 get_resume 了解当前简历现状，再决定如何修改。
+- 字段级本地化：文本字段为 {zh?,en?}。当前编辑语言为 ${lang}，请填充 ${locale} 对应槽位；修改时保留另一语言已有内容（合并而非覆盖）。
+- 日期统一 "YYYY-MM"，未知留空字符串。要点用强动词开头、尽量量化。
+【场景】
+${isEmpty
+      ? '当前简历为空（骨架已就绪）。若用户要生成简历，用 set_basics 填基本信息，用 add_item 向已有段落(skills/projects/work/education 等)逐条填充；按需 add_section。'
+      : '当前简历已有内容，用户在精修。按需 get_resume 后用 update_item / replace_highlights / add_item / remove_item / set_basics 增删改。'}
+【工具】
+- get_resume()：查看当前简历（含所有段落与条目 id）。
+- set_basics(...) / set_meta(...)
+- add_section(type,layout?,title?) / remove_section(section_id) / update_section(...)
+- add_item(section_id,item) / update_item(section_id,item_id,patch) / replace_highlights(section_id,item_id,highlights) / remove_item(...)
+- read_reference(name)：读取本 skill 的补充规则（如有）。
+${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 提到 emit_resume，请忽略，改用上述字段级工具实时编辑。）` : ''}`
+  }
+
+  const onSkillFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
     try {
-      if (f.name.toLowerCase().endsWith('.pdf')) setSourceText(await extractPdfText(f))
-      else setSourceText(await f.text())
-      setFileName(f.name)
+      const id = importSkillFromText(await f.text())
+      setSelectedSkill(id)
     } catch (e2) {
-      setErr((e2 as Error).message)
+      appendEntry({ id: entryId(), kind: 'error', message: `${t('skillImportFail', locale)}：${(e2 as Error).message}` })
     }
   }
 
-  const run = async () => {
-    setErr('')
-    setGen(null)
-    if (!cfg.apiKey) { setErr(t('copilotNoKey', locale)); return }
-    if (!prompt.trim() && !sourceText.trim()) { setErr(t('copilotNoInput', locale)); return }
-    setBusy(true)
+  const onAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
     try {
-      const r = await generateResume(cfg, prompt.trim(), locale, sourceText.trim() || undefined)
-      setGen(r)
-    } catch (e) {
-      setErr((e as Error).message)
-    } finally {
-      setBusy(false)
+      const text = f.name.toLowerCase().endsWith('.pdf') ? await extractPdfText(f) : await f.text()
+      setInput((p) => (p ? `${p}\n\n【已有材料】\n${text.slice(0, 24000)}` : `【已有材料】\n${text.slice(0, 24000)}`))
+    } catch (e2) {
+      appendEntry({ id: entryId(), kind: 'error', message: (e2 as Error).message })
     }
   }
 
-  const fillNew = async () => {
-    if (!gen) return
-    await create() // 新建空档并切为 current
-    update((d) => {
-      d.basics = gen.basics
-      d.sections = gen.sections
-      d.meta = gen.meta
-      // 保留新档的 id / name / templateId / createdAt
-    })
-    setGen(null)
-    setCopilotOpen(false)
+  const appendEntry = (e2: ChatEntry) => {
+    setSession(resumeId, { entries: [...entries, e2] })
   }
 
-  const fillOverwrite = () => {
-    if (!gen) return
+  const appendEvent = (e: AgentEvent) => {
+    if (e.type === 'assistant') {
+      if (!e.content && !e.reasoningContent) return
+      appendEntry({ id: entryId(), kind: 'assistant', text: e.content, reasoning: e.reasoningContent })
+    } else if (e.type === 'tool_call') {
+      appendEntry({ id: entryId(), kind: 'tool_call', name: e.call.name, args: e.call.args })
+    } else if (e.type === 'tool_result') {
+      appendEntry({ id: entryId(), kind: 'tool_result', name: e.name, result: e.result })
+    } else if (e.type === 'error') {
+      appendEntry({ id: entryId(), kind: 'error', message: e.message })
+    }
+    // done 事件已在 assistant 渲染过，不重复
+  }
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text || running) return
+    if (!cfg.apiKey) {
+      appendEntry({ id: entryId(), kind: 'error', message: t('copilotNoKey', locale) })
+      return
+    }
+    appendEntry({ id: entryId(), kind: 'user', text })
+    setInput('')
+    messages.push({ role: 'user', content: text })
+
+    // 确保/更新 system 首消息
+    if (messages.length === 1 || messages[0].role !== 'system') {
+      messages.unshift({ role: 'system', content: buildSystemPrompt() })
+    } else {
+      messages[0] = { role: 'system', content: buildSystemPrompt() }
+    }
+
+    // 本轮快照（撤销用）
+    setSession(resumeId, { prevSnapshot: current ? structuredClone(current) : null })
+
+    setRunning(true)
+    abortRef.current = new AbortController()
+    try {
+      await runAgentStream(cfg, {
+        messages,
+        tools: buildResumeTools(locale, selectedSkill),
+        maxSteps: 12,
+        temperature: 0.45,
+        onEvent: appendEvent,
+        signal: abortRef.current.signal,
+      })
+    } catch (e) {
+      appendEntry({ id: entryId(), kind: 'error', message: (e as Error).message })
+    } finally {
+      setRunning(false)
+      abortRef.current = null
+    }
+  }
+
+  const stop = () => {
+    abortRef.current?.abort()
+    setRunning(false)
+    appendEntry({ id: entryId(), kind: 'system', text: t('copilotStopped', locale) })
+  }
+
+  const undoTurn = () => {
+    if (!prevSnapshot) return
     update((d) => {
-      d.basics = gen.basics
-      d.sections = gen.sections
-      d.meta = gen.meta
-      // 保留 id / name / templateId / createdAt / locale
+      Object.assign(d, structuredClone(prevSnapshot))
     })
-    setGen(null)
-    setCopilotOpen(false)
+    setSession(resumeId, { prevSnapshot: null })
+    appendEntry({ id: entryId(), kind: 'system', text: t('copilotUndoTurn', locale) })
+  }
+
+  const newResume = async () => {
+    const newId = await create()
+    // 新简历的会话加一条系统提示
+    setSession(newId, { entries: [{ id: entryId(), kind: 'system', text: t('copilotEmptyNew', locale) }], messages: [], prevSnapshot: null })
+    setInput('')
+  }
+
+  const clearChat = () => {
+    clearSession(resumeId)
+  }
+
+  const onInputKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      void send()
+    }
   }
 
   return (
-    <aside className="w-[360px] flex-shrink-0 h-full border-l border-chrome-border bg-chrome-panel flex flex-col">
-      <header className="flex items-center justify-between px-3 h-10 border-b border-chrome-border">
-        <h2 className="text-xs font-semibold flex items-center gap-1.5">
-          <Sparkles size={14} /> {t('copilot', locale)}
+    <aside className="w-[360px] flex-shrink-0 h-full border-l border-copilot-border bg-copilot-bg flex flex-col text-copilot-ink">
+      <header className="flex items-center justify-between px-3 h-11 border-b border-copilot-border bg-copilot-bg">
+        <h2 className="text-xs font-semibold flex items-center gap-1.5 text-copilot-ink">
+          <Sparkles size={14} className="text-copilot-accent" /> {t('copilot', locale)}
         </h2>
-        <button
-          className="w-6 h-6 flex items-center justify-center rounded text-chrome-muted hover:text-chrome-ink hover:bg-chrome-bg"
-          onClick={() => setCopilotOpen(false)}
-          title={locale === 'zh' ? '收起' : 'Close'}
-        >
-          <PanelRightClose size={16} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotNewResume', locale)} onClick={newResume}><Plus size={14} /></button>
+          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotClearChat', locale)} onClick={clearChat}><Eraser size={14} /></button>
+          {prevSnapshot && !running && (
+            <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotUndoTurn', locale)} onClick={undoTurn}><Undo2 size={14} /></button>
+          )}
+          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" onClick={() => setCopilotOpen(false)} title={locale === 'zh' ? '收起' : 'Close'}><PanelRightClose size={16} /></button>
+        </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* 描述 */}
-        <div>
-          <label className="text-xs font-semibold text-chrome-ink">{t('copilotPromptLabel', locale)}</label>
-          <textarea
-            className="mt-1 w-full h-24 text-xs p-2 border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-ink"
-            placeholder={t('copilotPromptPlaceholder', locale)}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-        </div>
-
-        {/* 已有材料 */}
-        <div>
-          <label className="text-xs font-semibold text-chrome-ink">{t('copilotSourceLabel', locale)}</label>
-          <p className="text-[11px] text-chrome-muted">{t('copilotSourceHint', locale)}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <button
-              className="flex items-center gap-1 px-2 py-1 text-xs border border-chrome-border rounded hover:bg-chrome-bg"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Upload size={12} /> {t('copilotImportFile', locale)}
-            </button>
-            {fileName && (
-              <span className="flex items-center gap-1 text-[11px] text-chrome-muted">
-                {fileName}
-                <button
-                  className="text-chrome-muted hover:text-red-600"
-                  onClick={() => { setFileName(null); setSourceText('') }}
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-            <input ref={fileRef} type="file" accept=".md,.markdown,.txt,.tex,.pdf" className="hidden" onChange={onFile} />
-          </div>
-          <textarea
-            className="mt-1 w-full h-20 text-xs p-2 border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-ink"
-            placeholder={locale === 'zh' ? '或在此粘贴材料文本' : 'Or paste material text here'}
-            value={sourceText}
-            onChange={(e) => { setSourceText(e.target.value); setFileName(null) }}
-          />
-        </div>
-
-        {/* 生成 */}
-        <button
-          className="w-full px-3 py-2 text-xs font-semibold bg-chrome-ink text-white rounded hover:bg-black disabled:opacity-50"
-          disabled={busy}
-          onClick={run}
+      <div className="px-3 py-2 border-b border-copilot-border bg-copilot-surface/40">
+        <select
+          className="w-full text-xs p-1.5 border border-copilot-border rounded bg-copilot-surface text-copilot-ink focus:outline-none focus:border-copilot-accent transition-colors"
+          value={selectedSkillId ?? ''}
+          onChange={(e) => setSelectedSkill(e.target.value || null)}
         >
-          {busy ? t('copilotGenerating', locale) : t('copilotGenerate', locale)}
-        </button>
+          <option value="">{t('skillNone', locale)}</option>
+          {builtins.length > 0 && (
+            <optgroup label={t('skillBuiltin', locale)}>
+              {builtins.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+            </optgroup>
+          )}
+          {userSkills.length > 0 && (
+            <optgroup label={t('skillUser', locale)}>
+              {userSkills.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+            </optgroup>
+          )}
+        </select>
+        <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+          <button className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] border border-copilot-border rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface2 transition-colors" onClick={() => skillFileRef.current?.click()}>
+            <Upload size={11} /> {t('skillImport', locale)}
+          </button>
+          {userSkills.map((s) => (
+            <span key={s.id} className="flex items-center gap-0.5 text-[11px] text-copilot-muted px-1 py-0.5 bg-copilot-surface2 rounded">
+              {s.title}
+              <button className="text-copilot-muted hover:text-red-400" title={t('skillDelete', locale)} onClick={() => removeSkill(s.id)}><X size={10} /></button>
+            </span>
+          ))}
+          <input ref={skillFileRef} type="file" accept=".md,.markdown" className="hidden" onChange={onSkillFile} />
+        </div>
+      </div>
 
-        {err && <div className="text-xs text-red-600">{err}</div>}
+      {/* 快捷动作：优化润色 / 目标包装 / 翻译（提案-逐条采纳） */}
+      <div className="px-3 py-1.5 border-b border-copilot-border flex items-center gap-1">
+        <span className="text-[10px] text-copilot-dim mr-0.5">{t('quickActions', locale)}</span>
+        {(['optimize', 'tailor', 'translate'] as const).map((m) => (
+          <button
+            key={m}
+            className={clsx(
+              'flex-1 px-1.5 py-1 text-[11px] rounded transition-colors',
+              quickMode === m ? 'bg-copilot-accent text-white' : 'text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface',
+            )}
+            onClick={() => setQuickMode(quickMode === m ? null : m)}
+          >
+            {m === 'optimize' ? t('quickOptimize', locale) : m === 'tailor' ? t('quickTailor', locale) : t('quickTranslate', locale)}
+          </button>
+        ))}
+      </div>
 
-        {/* 预览 */}
-        {gen && (
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth">
+        {quickMode ? (
           <div className="space-y-2">
-            <div className="border border-chrome-border rounded p-3 bg-chrome-bg">
-              <div className="text-xs font-semibold mb-1 text-green-700">✓ {t('copilotPreviewTitle', locale)}</div>
-              <div className="text-sm font-medium">
-                {pick(gen.basics.name, locale) || (locale === 'zh' ? '（未识别姓名）' : '(no name)')}
-              </div>
-              <div className="text-xs text-chrome-muted mt-1">
-                {gen.sections.length} {locale === 'zh' ? '个段落' : 'sections'}：
-                {gen.sections.map((s) => ` ${pick(s.title, locale)}(${s.items.length})`).join(' · ')}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                className="flex-1 px-3 py-2 text-xs font-semibold bg-chrome-ink text-white rounded hover:bg-black"
-                onClick={fillNew}
-              >
-                {t('copilotNewDoc', locale)}
-              </button>
-              <button
-                className="flex-1 px-3 py-2 text-xs font-semibold border border-chrome-border rounded hover:bg-chrome-bg"
-                onClick={fillOverwrite}
-              >
-                {t('copilotOverwrite', locale)}
-              </button>
-            </div>
+            <button
+              className="text-[11px] text-copilot-muted hover:text-copilot-ink flex items-center gap-1"
+              onClick={() => setQuickMode(null)}
+            >
+              <ChevronRight size={11} className="rotate-180" /> {locale === 'zh' ? '返回对话' : 'Back to chat'}
+            </button>
+            {quickMode === 'optimize' && <OptimizeAction />}
+            {quickMode === 'tailor' && <TailorAction />}
+            {quickMode === 'translate' && <TranslateAction />}
+          </div>
+        ) : (
+          <>
+        {entries.length === 0 && (
+          <div className="text-[11px] text-copilot-dim text-center mt-8 leading-relaxed">
+            <Sparkles size={20} className="mx-auto mb-2 text-copilot-accent/60" />
+            {t('copilotChatPlaceholder', locale)}
           </div>
         )}
+        {entries.map((e) => {
+          if (e.kind === 'user') return (
+            <div key={e.id} className="flex justify-end">
+              <div className="max-w-[85%] bg-copilot-accentSoft text-copilot-ink text-xs px-3 py-2 rounded-2xl rounded-br-sm whitespace-pre-wrap leading-relaxed">{e.text}</div>
+            </div>
+          )
+          if (e.kind === 'assistant') return (
+            <div key={e.id} className="text-xs space-y-1">
+              {e.reasoning && (
+                <div
+                  className="text-[11px] text-copilot-dim italic leading-relaxed border-l-2 border-copilot-border pl-2 markdown-body"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(e.reasoning) }}
+                />
+              )}
+              {e.text && (
+                <div
+                  className="text-copilot-ink leading-relaxed markdown-body"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(e.text) }}
+                />
+              )}
+            </div>
+          )
+          if (e.kind === 'tool_call') return (
+            <div key={e.id} className="bg-copilot-surface border border-copilot-border rounded-lg px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5 text-[11px] text-copilot-muted">
+                <Wrench size={11} className="text-copilot-accent/80" />
+                <span className="font-mono text-copilot-ink/90">{e.name}</span>
+                <details className="ml-auto">
+                  <summary className="cursor-pointer text-[10px] text-copilot-dim hover:text-copilot-muted transition-colors list-none">
+                    <code className="font-mono">{JSON.stringify(e.args).length}b</code>
+                  </summary>
+                  <pre className="mt-1 text-[10px] whitespace-pre-wrap break-all text-copilot-dim font-mono bg-copilot-bg rounded p-1.5">{JSON.stringify(e.args, null, 2).slice(0, 400)}</pre>
+                </details>
+              </div>
+            </div>
+          )
+          if (e.kind === 'tool_result') return (
+            <div key={e.id} className="text-[11px] text-copilot-dim pl-2 border-l border-copilot-border">
+              <details>
+                <summary className="cursor-pointer hover:text-copilot-muted transition-colors flex items-center gap-1">
+                  <ChevronRight size={9} /> {e.name}
+                </summary>
+                <pre className="mt-1 whitespace-pre-wrap break-all text-copilot-dim font-mono">{e.result.slice(0, 600)}</pre>
+              </details>
+            </div>
+          )
+          if (e.kind === 'error') return <div key={e.id} className="text-xs text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-2.5 py-1.5">{e.message}</div>
+          return <div key={e.id} className="text-[11px] text-copilot-dim text-center py-1">{e.text}</div>
+        })}
+        {running && (
+          <div className="flex items-center gap-1.5 text-[11px] text-copilot-muted px-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-copilot-accent animate-pulse" />
+            {t('copilotThinking', locale)}
+          </div>
+        )}
+          </>
+        )}
       </div>
+
+      {!quickMode && (
+      <div className="border-t border-copilot-border p-2.5 bg-copilot-bg">
+        <div className="flex items-end gap-1.5 bg-copilot-surface border border-copilot-border rounded-xl px-2 py-1.5 focus-within:border-copilot-accent transition-colors">
+          <button className="w-7 h-7 flex items-center justify-center rounded-lg text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface2 flex-shrink-0 transition-colors" title={t('copilotAttach', locale)} onClick={() => fileRef.current?.click()}><Paperclip size={14} /></button>
+          <input ref={fileRef} type="file" accept=".md,.markdown,.txt,.tex,.pdf" className="hidden" onChange={onAttachFile} />
+          <textarea
+            className="flex-1 text-xs bg-transparent text-copilot-ink placeholder:text-copilot-dim resize-none focus:outline-none leading-relaxed"
+            rows={2}
+            placeholder={t('copilotChatPlaceholder', locale)}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onInputKey}
+            disabled={running}
+          />
+          {running ? (
+            <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-900/40 text-red-300 hover:bg-red-900/60 flex-shrink-0 transition-colors" title={t('copilotStop', locale)} onClick={stop}><Square size={13} /></button>
+          ) : (
+            <button className="w-7 h-7 flex items-center justify-center rounded-lg bg-copilot-accent text-white hover:opacity-90 flex-shrink-0 disabled:opacity-30 transition-opacity" title={t('copilotSend', locale)} onClick={send} disabled={!input.trim()}><Send size={13} /></button>
+          )}
+        </div>
+      </div>
+      )}
     </aside>
   )
 }
