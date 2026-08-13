@@ -19,7 +19,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
   const update = useResumeStore((s) => s.update)
   const [editing, setEditing] = useState(false)
 
-  const Template = useMemo(() => getTemplate(templateId), [templateId])
+  const Template = useMemo(() => getTemplate(templateId) ?? getTemplate('serif-classic'), [templateId])
 
   // 失焦写回：解析 data-edit="field::itemId" 或 "field::itemId::index"
   const onBlur = useCallback(

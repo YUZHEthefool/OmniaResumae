@@ -88,4 +88,20 @@ export const en: Dict = {
   skillDelete: 'Delete skill',
   skillBuiltin: 'Built-in',
   skillUser: 'Mine',
+
+  // Template Studio (AI-generated templates)
+  templateStudio: 'Template Studio',
+  tsDropImage: 'Upload reference (optional)',
+  tsDescription: 'Describe the style you want',
+  tsDescriptionPh: 'e.g. left-aligned serif, navy accent, compact two-column, bold large name…',
+  tsGenerate: 'Generate',
+  tsRefine: 'Refine',
+  tsRefinePh: 'e.g. make accent blue, bigger name…',
+  tsPreview: 'Preview',
+  tsSaveApply: 'Save & Apply',
+  tsNoKey: 'Configure an AI API key in Settings first',
+  tsVisionFallback: 'Current model does not support image input; generated from text only',
+  tsGenerating: 'Generating…',
+  tsCssWarning: 'AI-generated styles; external resource references auto-stripped',
+  tsEmpty: 'Upload an image or describe a style, then generate',
 }

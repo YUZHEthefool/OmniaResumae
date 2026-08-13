@@ -41,6 +41,11 @@ export function listTemplates(): TemplateEntry[] {
   return [...registry.values()]
 }
 
+/** 注销模板（仅用于删除用户生成的模板；内置模板不应调用）。 */
+export function unregisterTemplate(id: string): void {
+  registry.delete(id)
+}
+
 /* 模板自注册：在各模板文件末尾调用 registerTemplate。
  * 模板文件由 src/templates/index.ts 统一 import 触发副作用注册，
  * 避免在 registry.ts 内 import 造成循环依赖 TDZ。 */

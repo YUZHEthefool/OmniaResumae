@@ -11,8 +11,13 @@ import type { AIProviderConfig } from '@/types/ai'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  content: string | ContentPart[]
 }
+
+/** 多模态内容片段（规范中立形态，各适配器翻译为自家格式） */
+export type ContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; dataUrl: string } // data: URL；Anthropic 适配器拆 base64+media_type
 
 export interface ChatOptions {
   messages: ChatMessage[]
@@ -207,11 +212,40 @@ function toAnthropicMessages(messages: NeutralMsg[]): {
   return { system: system.join('\n\n'), msgs }
 }
 
+/* ───────── 多模态内容翻译 ───────── */
+/** 把 content 压成纯文本（system 抽取等场景用） */
+function contentToText(content: ChatMessage['content']): string {
+  if (typeof content === 'string') return content
+  return content.filter((p) => p.type === 'text').map((p) => p.text).join('\n')
+}
+
+/** 规范 content → OpenAI 兼容 content（string 原样；数组→text/image_url 片段） */
+function toOpenAIContent(content: ChatMessage['content']): unknown {
+  if (typeof content === 'string') return content
+  return content.map((p) =>
+    p.type === 'text'
+      ? { type: 'text', text: p.text }
+      : { type: 'image_url', image_url: { url: p.dataUrl } },
+  )
+}
+
+/** 规范 content → Anthropic content（string 原样；数组→text/image base64 片段） */
+function toAnthropicContent(content: ChatMessage['content']): unknown {
+  if (typeof content === 'string') return content
+  return content.map((p) => {
+    if (p.type === 'text') return { type: 'text', text: p.text }
+    // data:image/png;base64,XXXX → { type:'image', source:{type:'base64', media_type, data} }
+    const m = /^data:([^;]+);base64,(.*)$/s.exec(p.dataUrl)
+    if (m) return { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } }
+    return { type: 'text', text: '' } // 无法解析的 dataUrl 降级为空文本
+  })
+}
+
 /* ───────── OpenAI 兼容 ───────── */
 async function chatOpenAICompatible(config: AIProviderConfig, opts: ChatOptions): Promise<string> {
   const body: Record<string, unknown> = {
     model: config.model,
-    messages: opts.messages,
+    messages: opts.messages.map((m) => ({ role: m.role, content: toOpenAIContent(m.content) })),
     temperature: opts.temperature ?? 0.4,
     stream: false,
   }
@@ -237,11 +271,11 @@ async function chatOpenAICompatible(config: AIProviderConfig, opts: ChatOptions)
 
 /* ───────── Anthropic ───────── */
 async function chatAnthropic(config: AIProviderConfig, opts: ChatOptions): Promise<string> {
-  // 把 system 抽出（Anthropic 独立字段）
-  const system = opts.messages.filter((m) => m.role === 'system').map((m) => m.content).join('\n\n')
+  // 把 system 抽出（Anthropic 独立字段）；system 仅取文本
+  const system = opts.messages.filter((m) => m.role === 'system').map((m) => contentToText(m.content)).join('\n\n')
   const messages = opts.messages
     .filter((m) => m.role !== 'system')
-    .map((m) => ({ role: m.role, content: m.content }))
+    .map((m) => ({ role: m.role, content: toAnthropicContent(m.content) }))
 
   const body: Record<string, unknown> = {
     model: config.model,

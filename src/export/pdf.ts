@@ -89,6 +89,8 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     }
   }
   await new Promise((r) => requestAnimationFrame(() => r(null)))
+  // 等待 AI 生成模板动态注入的 Google Fonts 加载到位，避免 html2canvas 快照时缺字体
+  await document.fonts.ready
 
   let canvas: HTMLCanvasElement
   try {
@@ -200,6 +202,8 @@ export async function exportImage(node: HTMLElement, resume: Resume, locale: Loc
     }
   }
   await new Promise((r) => requestAnimationFrame(() => r(null)))
+  // 等待 AI 生成模板动态注入的 Google Fonts 加载到位，避免 html2canvas 快照时缺字体
+  await document.fonts.ready
 
   let canvas: HTMLCanvasElement
   try {

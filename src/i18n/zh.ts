@@ -91,6 +91,22 @@ export const zh = {
   skillDelete: '删除 skill',
   skillBuiltin: '内置',
   skillUser: '我的',
+
+  // 模板工坊（AI 生成模板）
+  templateStudio: '模板工坊',
+  tsDropImage: '上传参考图（可选）',
+  tsDescription: '描述你想要的样式',
+  tsDescriptionPh: '例如：左对齐衬线、深蓝主色、紧凑双栏、姓名加粗放大…',
+  tsGenerate: '生成',
+  tsRefine: '继续微调',
+  tsRefinePh: '例如：主色改成蓝色、姓名再大一点…',
+  tsPreview: '预览',
+  tsSaveApply: '保存并应用',
+  tsNoKey: '请先在「设置」中配置 AI API 密钥',
+  tsVisionFallback: '当前模型不支持图片输入，已改用文字描述生成',
+  tsGenerating: '生成中…',
+  tsCssWarning: 'AI 生成样式，已自动剥离外部资源引用',
+  tsEmpty: '上传图片或填写描述后点击生成',
 }
 
 export type Dict = typeof zh

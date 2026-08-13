@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import '@/templates' // 触发模板自注册（必须在渲染前）
+import { getTemplate } from '@/templates/registry'
 import { TopBar } from '@/components/chrome/TopBar'
 import { SplitPane } from '@/components/chrome/SplitPane'
 import { EditorPanel } from '@/components/editor/EditorPanel'
@@ -17,6 +18,18 @@ export default function App() {
   const loaded = useResumeStore((s) => s.loaded)
   const copilotOpen = useUIStore((s) => s.copilotOpen)
   const previewRef = useRef<HTMLDivElement>(null)
+
+  // 选中模板随简历走、跨刷新保持：current 变化时（init 载入 / 切简历 / 内容更新）
+  // 从 resume.templateId 重水合 uiStore.templateId，未注册的 id 回退 serif-classic。
+  // 用 setTemplateId（不镜像）避免写回 resume 造成环。
+  useEffect(() => {
+    const unsub = useResumeStore.subscribe((s) => {
+      const tid = s.current?.templateId
+      const want = tid && getTemplate(tid) ? tid : 'serif-classic'
+      if (useUIStore.getState().templateId !== want) useUIStore.getState().setTemplateId(want)
+    })
+    return unsub
+  }, [])
 
   useEffect(() => {
     void init()

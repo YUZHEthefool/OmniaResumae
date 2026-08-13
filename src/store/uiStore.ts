@@ -9,6 +9,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Locale } from '@/types/resume'
+import { useResumeStore } from '@/store/resumeStore'
 
 export type Theme = 'light' | 'dark'
 
@@ -21,6 +22,8 @@ interface UIState {
   theme: Theme
   setLocale: (l: Locale) => void
   setTemplate: (id: string) => void
+  /** 仅写 uiStore.templateId（不镜像）——供 App 从 resume.templateId 重水合用 */
+  setTemplateId: (id: string) => void
   setZoom: (z: number) => void
   setPanelRatio: (r: number) => void
   setCopilotOpen: (v: boolean) => void
@@ -44,7 +47,15 @@ export const useUIStore = create<UIState>()(
       copilotOpen: false,
       theme: 'light',
       setLocale: (locale) => set({ locale }),
-      setTemplate: (templateId) => set({ templateId }),
+      setTemplate: (templateId) => {
+        set({ templateId })
+        // 镜像到 resume.templateId 以持久：兑现注释承诺的「随简历走、跨刷新」。
+        // update 仅在 current 存在时生效；未载入时为 no-op（重水合由 App.subscribe 负责）。
+        useResumeStore.getState().update((d) => {
+          d.templateId = templateId
+        })
+      },
+      setTemplateId: (templateId) => set({ templateId }),
       setZoom: (zoom) => set({ zoom: Math.max(0.4, Math.min(1.5, zoom)) }),
       setPanelRatio: (panelRatio) =>
         set({ panelRatio: Math.max(0.2, Math.min(0.8, panelRatio)) }),

@@ -7,11 +7,13 @@ import { useState, useRef, useEffect, type RefObject } from 'react'
 import { clsx } from 'clsx'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
-import { listTemplates } from '@/templates/registry'
+import { listTemplates, unregisterTemplate } from '@/templates/registry'
 import { exportPDF, printResume, exportImage } from '@/export/pdf'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
+import { TemplateStudioDialog } from '@/components/dialogs/TemplateStudioDialog'
+import { useTemplateStore } from '@/store/templateStore'
 import { t } from '@/i18n'
 import { Github, Sparkles, Sun, Moon } from 'lucide-react'
 
@@ -35,7 +37,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
-  const [dialog, setDialog] = useState<null | 'import' | 'github' | 'settings'>(null)
+  const [dialog, setDialog] = useState<null | 'import' | 'github' | 'settings' | 'studio'>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -166,6 +168,15 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 key={tp.meta.id}
                 active={tp.meta.id === templateId}
                 onClick={() => { setTemplate(tp.meta.id); setMenu(null) }}
+                onRemove={
+                  tp.meta.id.startsWith('gen_')
+                    ? () => {
+                        useTemplateStore.getState().removeGenerated(tp.meta.id)
+                        unregisterTemplate(tp.meta.id)
+                        if (templateId === tp.meta.id) setTemplate('serif-classic')
+                      }
+                    : undefined
+                }
               >
                 <span className="text-base mr-2">{tp.meta.thumbnail}</span>
                 <span>{tp.meta.name[locale]}</span>
@@ -188,6 +199,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {/* 后续 Phase 占位 */}
       <button className={btnClsGhost} title={t('import', locale)} onClick={() => setDialog('import')}>{t('import', locale)}</button>
       <button className={btnClsGhost} title={t('github', locale)} onClick={() => setDialog('github')}>{t('github', locale)}</button>
+      <button className={btnClsGhost} title={t('templateStudio', locale)} onClick={() => setDialog('studio')}>{t('templateStudio', locale)}</button>
       {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
       <button
         className={clsx(
@@ -235,6 +247,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'github' && <GitHubImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
+      {dialog === 'studio' && <TemplateStudioDialog onClose={() => setDialog(null)} />}
     </div>
   )
 }

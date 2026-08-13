@@ -171,6 +171,14 @@ export const TranslateProposalSchema = z.object({
   pairs: z.array(z.object({ source: z.string(), target: z.string() })).default([]),
 })
 
+/* ───────── AI 生成模板校验（模板工坊） ───────── */
+export const GeneratedTemplateSchema = z.object({
+  name: z.object({ zh: z.string(), en: z.string() }),
+  style: z.string().default(''),
+  css: z.string().min(1),
+  fonts: z.array(z.string()).default([]),
+})
+
 /** 校验并 parse；失败抛 ZodError，调用方应捕获并提示用户 */
 export function validateResume(data: unknown) {
   return ResumeSchema.parse(data)
