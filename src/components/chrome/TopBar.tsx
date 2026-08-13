@@ -11,10 +11,9 @@ import { listTemplates } from '@/templates/registry'
 import { exportPDF, printResume } from '@/export/pdf'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
-import { AIDialog } from '@/ai/AIDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { t } from '@/i18n'
-import { Github, Sparkles } from 'lucide-react'
+import { Github, Sparkles, Sun, Moon } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -25,6 +24,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const setZoom = useUIStore((s) => s.setZoom)
   const copilotOpen = useUIStore((s) => s.copilotOpen)
   const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
+  const theme = useUIStore((s) => s.theme)
+  const toggleTheme = useUIStore((s) => s.toggleTheme)
 
   const current = useResumeStore((s) => s.current)
   const list = useResumeStore((s) => s.list)
@@ -34,7 +35,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
-  const [dialog, setDialog] = useState<null | 'import' | 'github' | 'ai' | 'settings'>(null)
+  const [dialog, setDialog] = useState<null | 'import' | 'github' | 'settings'>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -84,6 +85,15 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
         <Github size={16} />
       </a>
 
+      {/* 主题切换 */}
+      <button
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-chrome-bg text-chrome-muted"
+        title={theme === 'dark' ? (locale === 'zh' ? '切到浅色' : 'Light mode') : (locale === 'zh' ? '切到深色' : 'Dark mode')}
+        onClick={toggleTheme}
+      >
+        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+
       <Divider />
 
       {/* 简历列表 */}
@@ -123,7 +133,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
         {(['zh', 'en'] as const).map((l) => (
           <button
             key={l}
-            className={clsx('px-2.5 py-1 text-xs font-semibold', locale === l ? 'bg-chrome-ink text-white' : 'text-chrome-muted')}
+            className={clsx('px-2.5 py-1 text-xs font-semibold', locale === l ? 'bg-chrome-ink text-chrome-bg' : 'text-chrome-muted')}
             onClick={() => setLocale(l)}
           >
             {l === 'zh' ? '中' : 'EN'}
@@ -169,14 +179,13 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <button
         className={clsx(
           'w-7 h-7 flex items-center justify-center rounded',
-          copilotOpen ? 'bg-chrome-ink text-white' : 'text-chrome-muted hover:bg-chrome-bg',
+          copilotOpen ? 'bg-chrome-ink text-chrome-bg' : 'text-chrome-muted hover:bg-chrome-bg',
         )}
         title={t('copilot', locale)}
         onClick={() => setCopilotOpen(!copilotOpen)}
       >
         <Sparkles size={16} />
       </button>
-      <button className={btnClsGhost} title={t('ai', locale)} onClick={() => setDialog('ai')}>{t('ai', locale)}</button>
       <button className={btnClsGhost} title={t('settings', locale)} onClick={() => setDialog('settings')}>{t('settings', locale)}</button>
 
       <Divider />
@@ -184,7 +193,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {/* 导出 */}
       <div className="relative">
         <button
-          className="px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-white rounded hover:bg-black disabled:opacity-60"
+          className="px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-chrome-bg rounded hover:opacity-80 disabled:opacity-60"
           onClick={() => setMenu(menu === 'export' ? null : 'export')}
           disabled={exporting}
         >
@@ -209,7 +218,6 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {/* 弹窗 */}
       {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'github' && <GitHubImportDialog onClose={() => setDialog(null)} />}
-      {dialog === 'ai' && <AIDialog onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
     </div>
   )
