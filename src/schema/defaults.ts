@@ -43,7 +43,7 @@ export function createEmptyResume(name = '我的简历'): Resume {
   return {
     id: uid('resume'),
     name,
-    templateId: 'brutalist',
+    templateId: 'serif-classic',
     meta: {
       targetRole: { zh: '', en: '' },
       keywords: [

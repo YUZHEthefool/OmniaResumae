@@ -9,7 +9,7 @@ export function createSampleResume(now: number): Resume {
   return {
     id: 'resume_sample_omnia',
     name: '示例 · OmniaResumae',
-    templateId: 'brutalist',
+    templateId: 'serif-classic',
     meta: {
       targetRole: { zh: '前端工程师', en: 'Frontend Engineer' },
       keywords: [

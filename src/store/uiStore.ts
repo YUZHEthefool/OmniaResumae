@@ -38,7 +38,7 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       locale: 'zh',
-      templateId: 'brutalist',
+      templateId: 'serif-classic',
       zoom: 0.85,
       panelRatio: 0.42,
       copilotOpen: false,
