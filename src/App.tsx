@@ -4,15 +4,18 @@
  */
 import { useEffect, useRef } from 'react'
 import { useResumeStore } from '@/store/resumeStore'
+import { useUIStore } from '@/store/uiStore'
 import '@/templates' // 触发模板自注册（必须在渲染前）
 import { TopBar } from '@/components/chrome/TopBar'
 import { SplitPane } from '@/components/chrome/SplitPane'
 import { EditorPanel } from '@/components/editor/EditorPanel'
 import { PreviewPane } from '@/components/preview/PreviewPane'
+import { CopilotPanel } from '@/ai/CopilotPanel'
 
 export default function App() {
   const init = useResumeStore((s) => s.init)
   const loaded = useResumeStore((s) => s.loaded)
+  const copilotOpen = useUIStore((s) => s.copilotOpen)
   const previewRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -30,8 +33,11 @@ export default function App() {
   return (
     <div className="h-full flex flex-col">
       <TopBar previewRef={previewRef} />
-      <div className="flex-1 min-h-0">
-        <SplitPane left={<EditorPanel />} right={<PreviewPane ref={previewRef} />} />
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-w-0">
+          <SplitPane left={<EditorPanel />} right={<PreviewPane ref={previewRef} />} />
+        </div>
+        {copilotOpen && <CopilotPanel />}
       </div>
     </div>
   )

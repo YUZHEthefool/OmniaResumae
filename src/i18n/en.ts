@@ -59,4 +59,33 @@ export const en: Dict = {
   emptyHint: 'Fill the form on the left; preview updates live',
 
   comingSoon: 'This feature arrives in a later phase',
+
+  // AI Copilot right panel (conversational agent)
+  copilot: 'AI Assistant',
+  copilotNoKey: 'Configure an AI API key in Settings first',
+  copilotChatPlaceholder: 'Describe or refine the current resume; Enter to send',
+  copilotSend: 'Send',
+  copilotStop: 'Stop',
+  copilotStopped: 'Stopped',
+  copilotNewResume: 'New resume',
+  copilotUndoTurn: 'Undo this turn',
+  copilotClearChat: 'Clear chat',
+  copilotAttach: 'Attach material',
+  copilotEmptyNew: 'New empty resume; generate from scratch',
+  copilotToolCall: 'Tool call',
+  copilotThinking: 'Thinking…',
+  copilotDone: 'Done',
+  quickOptimize: 'Optimize',
+  quickTailor: 'Tailor',
+  quickTranslate: 'Translate',
+  quickActions: 'Quick actions',
+
+  // Skill
+  skill: 'Skill',
+  skillNone: 'None',
+  skillImport: 'Import skill',
+  skillImportFail: 'Invalid skill format',
+  skillDelete: 'Delete skill',
+  skillBuiltin: 'Built-in',
+  skillUser: 'Mine',
 }

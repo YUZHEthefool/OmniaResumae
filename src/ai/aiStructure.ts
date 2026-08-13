@@ -9,7 +9,7 @@ import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, SectionType } from '@/types/resume'
 import { uid, nowStamp } from '@/schema/defaults'
 
-const SCHEMA_HINT = `{
+export const SCHEMA_HINT = `{
   "basics": {
     "name": {"zh":"","en":""}, "nameRomanized":"",
     "label": {"zh":"","en":""}, "summary": {"zh":"","en":""},
@@ -86,7 +86,7 @@ ${rawText.slice(0, 24000)}
 }
 
 /** 把 AI 返回的松散对象规范化成合法 Resume（补 id/时间戳，确保字段完整） */
-function normalizeToResume(data: unknown, locale: Locale): Resume {
+export function normalizeToResume(data: unknown, locale: Locale): Resume {
   const d = (data ?? {}) as Record<string, unknown>
   const b = (d.basics ?? {}) as Record<string, unknown>
   const t = nowStamp()
