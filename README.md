@@ -1,6 +1,8 @@
 # OmniaResumae
 
-A **fully client-side, templated resume builder**. Fill one form on the left, see the resume render live on the right. Bilingual (Chinese / English). Import from existing PDF / LaTeX / Markdown resumes, pull projects from GitHub, and let AI optimize or tailor your resume to a target company. Ship several art-style templates from one dataset. **No backend, BYO keys, your data never leaves your machine.**
+A **fully client-side, templated resume builder**. Fill one form on the left, see the resume render live on the right. Bilingual (Chinese / English). Import from existing PDF / LaTeX / Markdown resumes, pull projects from GitHub, and let an **AI Copilot** generate or refine your resume through real-time, multi-turn conversation. Ship several art-style templates from one dataset. **No backend, BYO keys, your data never leaves your machine.**
+
+> **Live preview:** <https://omnia-resumae.pages.dev/>
 
 ## Features
 
@@ -13,10 +15,10 @@ A **fully client-side, templated resume builder**. Fill one form on the left, se
 - One-click language toggle in the top bar; both versions render correctly.
 
 ### Multiple art-style templates
-One dataset switches between templates live:
+One dataset switches between templates live (defaults to **Serif Classic**):
+- **Serif Classic** — Source Serif, blue accent, two columns (inspired by LapisCV serif).
 - **Brutalist** — black / yellow / red, thick borders, Bebas Neue + Space Mono + Noto Sans SC, main + sidebar grid.
 - **Minimal / Swiss** — Inter, single column, thin rules, monochrome.
-- **Serif Classic** — Source Serif, blue accent, two columns (inspired by LapisCV serif).
 - **Magazine / Editorial** — Playfair display headings, columns, accent color.
 - Adding a style is one folder + one registry line; the editor never changes.
 
@@ -34,18 +36,23 @@ One dataset switches between templates live:
 - Optional PAT (stored locally) for higher rate limits and private repos.
 - Pick repos → fetch languages / readme → convert to project entries. Owner vs. contributor is detected and tagged.
 
-### AI assistant (BYO key, client-side)
-- Pluggable providers via native `fetch`: **OpenAI-compatible** (OpenAI / DeepSeek / Qwen / Zhipu, all support `response_format: json_object`) and **Anthropic Claude** (browser-direct via `anthropic-dangerous-direct-browser-access`).
-- **Optimize & polish** — rewrite bullets (action verbs, quantified impact); accept per-item.
-- **Target-company tailoring** — input company + JD; AI proposes which projects to feature, rewrites highlights to match JD keywords, generates a "job-requirement ↔ self-match" list, and a headline — all as a **proposal you review and accept**, never auto-applied.
-- **Translate** — auto-collect fields filled in one language but empty in the other and translate in bulk.
+### AI Copilot — real conversational agent (BYO key, client-side)
+- Pluggable providers via native `fetch`: **OpenAI-compatible** (OpenAI / DeepSeek / Qwen / Zhipu, support `response_format: json_object` + tool calling) and **Anthropic Claude** (browser-direct via `anthropic-dangerous-direct-browser-access`).
+- **Conversational generation & refinement** — a docked right panel runs a real agent loop (`runAgentStream`): you describe what you want or ask to refine the current resume, and the agent calls **field-level tools** (`get_resume`, `set_basics`, `add_item`, `update_item`, `replace_highlights`, …) that edit the live resume in real time. Each step — assistant text, tool calls, tool results, reasoning — shows in the transcript. Per-resume chat history, per-turn undo, and a stop button.
+- **Skills** — reusable instruction packs (Anthropic-Agent-Skills-style: frontmatter + body + `reference` sections for progressive disclosure). Built-ins: **通用简历 / 资深工程师 / 应届生 / 经历酥化** (experience crisping — evidence over fabrication, adapted from [Hisn00w/ASu-skills](https://github.com/Hisn00w/ASu-skills)). Import your own `.md` skill.
+- **Quick actions** (kept as propose-and-accept): **Optimize & polish**, **Target-company tailoring**, **Translate** — AI proposes, you accept per-item; never auto-overwrites.
+- Markdown rendering in the panel is DOMPurify-sanitized; DeepSeek-Reasoner `reasoning_content` is passed back across turns.
 - Fetch the available model list from `/models` and click to select, or type any model name manually.
 
-### Export (PDF-centric)
+### Export
 - **Single-page PDF** — content scaled to one A4 (compact layout, borders intact).
 - **Multi-page PDF** — sliced by A4 height for fidelity (no font shrink).
+- **PNG image** — export the whole resume as a PNG (same off-screen A4 render).
 - **Print / Save as PDF** — isolated print window, vector text, selectable/searchable.
-- Export renders off-screen, so preview zoom is unaffected.
+- Avatar is pre-cropped to a square before rendering so it never distorts on export.
+
+### Light / Dark theme
+- A sun/moon toggle in the top bar switches the editor chrome to a gray dark mode (persisted). The resume preview stays on its template background (a resume is a document for recruiters).
 
 ## Tech Stack
 
@@ -89,8 +96,9 @@ Each template is a React component consuming `{ resume, locale }` plus scoped CS
 ## Acknowledgements
 
 - [LapisCV](https://github.com/BingyanStudio/LapisCV) — Markdown + CSS resume system; import reference and serif-template inspiration.
+- [Hisn00w/ASu-skills](https://github.com/Hisn00w/ASu-skills) — the "经历酥化" (experience crisping) skill methodology, adapted as a built-in skill.
 - The bundled brutalist template is the initial art direction.
 
 ## License
 
-MIT
+[Apache License 2.0](./LICENSE)
