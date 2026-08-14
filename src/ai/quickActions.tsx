@@ -128,7 +128,11 @@ export function TailorAction() {
         if (sec) {
           for (const rw of prop.rewrittenHighlights) {
             const item = sec.items.find((i) => i.id === rw.projectId) as { highlights?: { zh?: string; en?: string }[] } | undefined
-            if (item) item.highlights = rw.highlights.map((h) => ({ [locale]: h } as { zh?: string; en?: string }))
+            if (item) {
+              // 按索引保留另一语言，避免改写要点时整组擦除非当前语言（双语简历数据丢失）
+              const old = item.highlights ?? []
+              item.highlights = rw.highlights.map((h, i) => ({ ...(old[i] ?? {}), [locale]: h } as { zh?: string; en?: string }))
+            }
           }
           sec.items.sort((a, b) => {
             const af = prop.featuredProjects.find((f) => f.projectId === a.id) ? 0 : 1
@@ -259,7 +263,8 @@ export function TranslateAction() {
     if (!prop) return
     update((d) => {
       prop.pairs.forEach((pair, i) => {
-        if (accepted.has(i)) fields[i].apply(d, pair.target)
+        // AI 可能返回多于字段数的 pairs，越界时跳过，避免 fields[i] undefined 崩溃
+        if (accepted.has(i) && fields[i]) fields[i].apply(d, pair.target)
       })
     })
     setProp(null); setAccepted(new Set())
