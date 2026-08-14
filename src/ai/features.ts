@@ -2,12 +2,42 @@
  * AI 能力实现：优化润色 / 目标公司定向包装 / 翻译
  * 全部产出为 Proposal，经 zod 校验，由 ProposalReviewDialog 逐项接受。
  */
-import { chat, extractJSON } from './providers'
+import { chat, extractJSON, type ChatMessage } from './providers'
 import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, Localized } from '@/types/resume'
 import { OptimizeProposalSchema, TailorProposalSchema, TranslateProposalSchema } from '@/schema/validate'
 import type { OptimizeProposal, TailorProposal, TranslateProposal } from '@/types/ai'
 import { pick } from '@/types/resume'
+
+/**
+ * 调用 JSON mode 并解析；失败重试一次（附"只输出合法 JSON"提示），仍失败抛友好错误。
+ * 与 generate.ts/aiStructure.ts 行为对齐，避免裸 SyntaxError 透传到 UI。
+ */
+async function chatJsonWithRetry(
+  config: AIProviderConfig,
+  messages: ChatMessage[],
+  temperature: number,
+): Promise<unknown> {
+  const raw = await chat(config, { messages, json: true, temperature })
+  try {
+    return JSON.parse(extractJSON(raw))
+  } catch {
+    const retry = await chat(config, {
+      messages: [
+        ...messages,
+        { role: 'assistant', content: raw },
+        { role: 'user', content: '上一段不是合法 JSON，请只输出严格合法的 JSON 对象。' },
+      ],
+      json: true,
+      temperature: 0.1,
+    })
+    try {
+      return JSON.parse(extractJSON(retry))
+    } catch {
+      throw new Error('AI 未返回合法 JSON，请重试')
+    }
+  }
+}
 
 /* ───────── A. 优化润色 ───────── */
 export async function optimizeItems(
@@ -25,8 +55,7 @@ export async function optimizeItems(
 请改写以下简历要点：
 ${items.map((x, i) => `${i + 1}. ${x}`).join('\n')}
 只输出 JSON。`
-  const raw = await chat(config, { messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], json: true, temperature: 0.5 })
-  const parsed = JSON.parse(extractJSON(raw))
+  const parsed = await chatJsonWithRetry(config, [{ role: 'system', content: sys }, { role: 'user', content: user }], 0.5)
   return OptimizeProposalSchema.parse(parsed)
 }
 
@@ -63,8 +92,7 @@ ${projDigest || '（无项目）'}
 
 只输出 JSON。`
 
-  const raw = await chat(config, { messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], json: true, temperature: 0.5 })
-  const parsed = JSON.parse(extractJSON(raw))
+  const parsed = await chatJsonWithRetry(config, [{ role: 'system', content: sys }, { role: 'user', content: user }], 0.5)
   return TailorProposalSchema.parse(parsed)
 }
 
@@ -78,7 +106,6 @@ export async function translateItems(
   const sys = `你是专业翻译。把给定的简历条目从${from === 'zh' ? '中文' : 'English'}译成${to === 'zh' ? '中文' : 'English'}，保持简历语气、术语准确、简洁。
 只输出 JSON：{"pairs":[{"source":"原文","target":"译文"}]}`
   const user = items.map((x, i) => `${i + 1}. ${x}`).join('\n')
-  const raw = await chat(config, { messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], json: true, temperature: 0.3 })
-  const parsed = JSON.parse(extractJSON(raw))
+  const parsed = await chatJsonWithRetry(config, [{ role: 'system', content: sys }, { role: 'user', content: user }], 0.3)
   return TranslateProposalSchema.parse(parsed)
 }
