@@ -1,13 +1,17 @@
 /**
  * SectionEditor：渲染单个 section 的标题/布局/显隐 + 条目列表
  * 按 section.type 调用对应 itemEditor。
+ * 段落与条目均支持 @dnd-kit 拖拽排序（保留 ▲▼ 按钮作无障碍备用）。
  */
 import { useState } from 'react'
 import { clsx } from 'clsx'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
 import { SECTION_TITLE_PRESETS } from '@/schema/defaults'
 import { LocalizedInput, Field } from './fields'
+import { t } from '@/i18n'
 import {
   WorkEditor, EducationEditor, ProjectEditor, SkillEditor,
   AwardEditor, PublicationEditor, MatchEditor, DomainEditor,
@@ -27,14 +31,23 @@ const EDITORS: Record<string, React.FC<{ item: never; update: (p: never) => void
   community: CommunityEditor as never,
 }
 
-export function SectionEditor({ section, locale }: { section: Section; locale: Locale }) {
+/** 由外层（EditorPanel）注入的段落级排序句柄 */
+interface SortableProps {
+  setNodeRef: (el: HTMLElement | null) => void
+  style?: React.CSSProperties
+  gripProps?: React.HTMLAttributes<HTMLElement>
+}
+
+export function SectionEditor({ section, locale, sortable }: { section: Section; locale: Locale; sortable?: SortableProps }) {
   const update = useResumeStore((s) => s.update)
   const moveSection = useResumeStore((s) => s.moveSection)
   const removeSection = useResumeStore((s) => s.removeSection)
   const toggleVisible = useResumeStore((s) => s.toggleSectionVisible)
+  const moveItemTo = useResumeStore((s) => s.moveItemTo)
   const [open, setOpen] = useState(true)
 
   const Editor = EDITORS[section.type]
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const setSection = (fn: (d: Section) => void) =>
     update((d) => {
@@ -67,9 +80,30 @@ export function SectionEditor({ section, locale }: { section: Section; locale: L
       s.items[j] = tmp
     })
 
+  const onItemDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = section.items.findIndex((it) => it.id === active.id)
+    const to = section.items.findIndex((it) => it.id === over.id)
+    if (from >= 0 && to >= 0) moveItemTo(section.id, from, to)
+  }
+
   return (
-    <div className="border border-chrome-border rounded mb-2 bg-chrome-panel">
+    <div
+      ref={sortable?.setNodeRef}
+      style={sortable?.style}
+      className="border border-chrome-border rounded mb-2 bg-chrome-panel"
+    >
       <div className="flex items-center gap-2 px-3 py-2 bg-chrome-bg rounded-t">
+        {sortable?.gripProps && (
+          <span
+            {...sortable.gripProps}
+            className="cursor-grab text-chrome-muted hover:text-chrome-ink text-xs select-none"
+            title={t('dragHandle', locale)}
+          >
+            ⠿
+          </span>
+        )}
         <button
           type="button"
           className="text-chrome-muted hover:text-chrome-ink text-xs w-4"
@@ -104,7 +138,7 @@ export function SectionEditor({ section, locale }: { section: Section; locale: L
             </Field>
             <Field label="布局">
               <select
-                className="w-full px-2.5 py-1.5 text-sm bg-white border border-chrome-border rounded outline-none"
+                className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
                 value={section.layout}
                 onChange={(e) => setSection((s) => { s.layout = e.target.value as 'main' | 'sidebar' })}
               >
@@ -116,19 +150,30 @@ export function SectionEditor({ section, locale }: { section: Section; locale: L
 
           {Editor ? (
             <>
-              {(section.items as Array<{ id: string }>).map((it, i) => (
-                <div key={it.id} className="border border-chrome-border rounded p-2.5 bg-white mb-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-mono text-chrome-muted">#{i + 1} {itemTitle(it, locale, SECTION_TITLE_PRESETS[section.type]?.[locale] || section.type)}</span>
-                    <div className="flex gap-1 text-chrome-muted text-xs">
-                      <button type="button" onClick={() => moveItem(it.id, -1)}>▲</button>
-                      <button type="button" onClick={() => moveItem(it.id, 1)}>▼</button>
-                      <button type="button" className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
-                    </div>
-                  </div>
-                  <Editor item={it as never} update={(p: never) => setItem(it.id, p as never)} />
-                </div>
-              ))}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onItemDragEnd}>
+                <SortableContext items={(section.items as Array<{ id: string }>).map((it) => it.id)} strategy={verticalListSortingStrategy}>
+                  {(section.items as Array<{ id: string }>).map((it, i) => (
+                    <SortableItem key={it.id} id={it.id}>
+                      {({ setNodeRef, style, gripProps }) => (
+                        <div ref={setNodeRef} style={style} className="border border-chrome-border rounded p-2.5 bg-white mb-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-mono text-chrome-muted flex items-center gap-1.5">
+                              <span {...gripProps} className="cursor-grab text-chrome-muted hover:text-chrome-ink select-none" title={t('dragHandle', locale)}>⠿</span>
+                              #{i + 1} {itemTitle(it, locale, SECTION_TITLE_PRESETS[section.type]?.[locale] || section.type)}
+                            </span>
+                            <div className="flex gap-1 text-chrome-muted text-xs">
+                              <button type="button" onClick={() => moveItem(it.id, -1)}>▲</button>
+                              <button type="button" onClick={() => moveItem(it.id, 1)}>▼</button>
+                              <button type="button" className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
+                            </div>
+                          </div>
+                          <Editor item={it as never} update={(p: never) => setItem(it.id, p as never)} />
+                        </div>
+                      )}
+                    </SortableItem>
+                  ))}
+                </SortableContext>
+              </DndContext>
               <button
                 type="button"
                 className="text-xs text-chrome-ink hover:underline"
@@ -143,5 +188,30 @@ export function SectionEditor({ section, locale }: { section: Section; locale: L
         </div>
       )}
     </div>
+  )
+}
+
+/** 条目级可排序包装：render-prop 注入 setNodeRef / style / 拖拽句柄 */
+function SortableItem({
+  id,
+  children,
+}: {
+  id: string
+  children: (p: { setNodeRef: (el: HTMLElement | null) => void; style: React.CSSProperties; gripProps: React.HTMLAttributes<HTMLElement> }) => React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <>
+      {children({
+        setNodeRef,
+        style: {
+          transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+          transition,
+          opacity: isDragging ? 0.7 : undefined,
+          zIndex: isDragging ? 50 : undefined,
+        },
+        gripProps: { ...listeners, ...attributes } as React.HTMLAttributes<HTMLElement>,
+      })}
+    </>
   )
 }

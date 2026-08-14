@@ -3,7 +3,9 @@
  * 顶部 Basics + Meta，下面按 section 列出 SectionEditor，末尾"添加段落"。
  */
 import { useState } from 'react'
-import type { Resume, SectionType } from '@/types/resume'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { Resume, SectionType, Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { t } from '@/i18n'
@@ -27,11 +29,21 @@ export function EditorPanel() {
   const resume = useResumeStore((s) => s.current) as Resume | null
   const update = useResumeStore((s) => s.update)
   const addSection = useResumeStore((s) => s.addSection)
+  const moveSectionTo = useResumeStore((s) => s.moveSectionTo)
   const locale = useUIStore((s) => s.locale)
   const [showAdd, setShowAdd] = useState(false)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   if (!resume) {
     return <div className="p-4 text-sm text-chrome-muted">加载中…</div>
+  }
+
+  const onSectionDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = resume.sections.findIndex((s) => s.id === active.id)
+    const to = resume.sections.findIndex((s) => s.id === over.id)
+    if (from >= 0 && to >= 0) moveSectionTo(from, to)
   }
 
   const setBasics = (patch: Partial<Resume['basics']>) =>
@@ -100,10 +112,14 @@ export function EditorPanel() {
         </Field>
       </Block>
 
-      {/* ─── Sections ─── */}
-      {resume.sections.map((s) => (
-        <SectionEditor key={s.id} section={s} locale={locale} />
-      ))}
+      {/* ─── Sections（可拖拽排序） ─── */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onSectionDragEnd}>
+        <SortableContext items={resume.sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          {resume.sections.map((s) => (
+            <SortableSection key={s.id} section={s} locale={locale} />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       {/* 添加段落 */}
       <div className="mt-2">
@@ -139,6 +155,27 @@ export function EditorPanel() {
         )}
       </div>
     </div>
+  )
+}
+
+/** 段落级可排序包装：注入 setNodeRef / style / 拖拽句柄给 SectionEditor */
+function SortableSection({ section, locale }: { section: Section; locale: Locale }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id })
+  return (
+    <SectionEditor
+      section={section}
+      locale={locale}
+      sortable={{
+        setNodeRef,
+        style: {
+          transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+          transition,
+          opacity: isDragging ? 0.7 : undefined,
+          zIndex: isDragging ? 50 : undefined,
+        },
+        gripProps: { ...listeners, ...attributes } as React.HTMLAttributes<HTMLElement>,
+      }}
+    />
   )
 }
 
