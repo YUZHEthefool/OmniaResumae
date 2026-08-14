@@ -26,7 +26,9 @@ export function parseLatexToFragment(tex: string): ImportFragment {
 
   // email / phone / url
   const email = src.match(/\\email\{([^}]*)\}/i)?.[1] || src.match(/\\homepage\{([^}]*)\}/i)?.[1]
-  const phone = src.match(/\\phone\{?([^}]*)\}?/i)?.[1] || src.match(/\\mobile\{?([^}]*)\}?/i)?.[1]
+  // phone/mobile：要求 {...} 或 空格+单 token，避免无括号时 ([^}]*) 贪婪吞掉后续文档
+  const phoneM = src.match(/\\(?:phone|mobile)\s*\{([^}]*)\}/i) || src.match(/\\(?:phone|mobile)\s+([^\s\\]+)/i)
+  const phone = phoneM?.[1]
   const url = src.match(/\\homepage\{([^}]*)\}/i)?.[1] || src.match(/\\href\{(https?:[^}]*)\}/i)?.[1]
   if (email && /@/.test(email)) frag.basics = { ...frag.basics, email: clean(email) }
   if (phone) frag.basics = { ...frag.basics, phone: clean(phone) }
@@ -49,7 +51,8 @@ export function parseLatexToFragment(tex: string): ImportFragment {
     const type = mapSectionType(title)
 
     // moderncv \cventry{date}{degree/position}{institution/company}{location}{grade}{desc}
-    const cvRe = /\\cventry\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([\s\S]*?)\}(?=\s*\\|$)/g
+    // desc 含嵌套命令的 } 时，旧正则在第一个 } 处截断；改为只在 } 后跟下一个条目/段命令或文末才收尾
+    const cvRe = /\\cventry\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([\s\S]*?)\}(?=\s*\\(?:cventry|cvitem|cvlistitem|cvdoubleitem|section|subsection|cvsection|begin|end|item)|\s*$)/g
     let c: RegExpExecArray | null
     let foundEntries = false
     while ((c = cvRe.exec(body))) {
