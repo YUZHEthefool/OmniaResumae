@@ -52,7 +52,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <h3 className="text-sm font-semibold mb-2">AI 模型</h3>
             <label className="block text-xs text-chrome-muted mb-1">服务商预置</label>
             <select
-              className="w-full px-2.5 py-1.5 text-sm border border-chrome-border rounded mb-3"
+              className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded mb-3"
               value={presetId}
               onChange={(e) => setAIPreset(e.target.value)}
             >
@@ -65,7 +65,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <div className="flex gap-2 mb-3">
               <input
                 type={showKey ? 'text' : 'password'}
-                className="flex-1 px-2.5 py-1.5 text-sm border border-chrome-border rounded"
+                className="flex-1 px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
                 placeholder="粘贴你的 API Key（仅存本机浏览器）"
                 value={ai.apiKey}
                 onChange={(e) => setAIConfig({ apiKey: e.target.value })}
@@ -79,7 +79,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               模型名称（手动输入，或点"拉取可用模型"后点选）
             </label>
             <input
-              className="w-full px-2.5 py-1.5 text-sm border border-chrome-border rounded mb-1"
+              className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded mb-1"
               placeholder="如 gpt-4o-mini / deepseek-chat / glm-4-plus / claude-sonnet-5"
               value={ai.model}
               onChange={(e) => setAIConfig({ model: e.target.value })}
@@ -129,7 +129,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
 
             <label className="block text-xs text-chrome-muted mb-1">Base URL（高级，可改）</label>
             <input
-              className="w-full px-2.5 py-1.5 text-xs font-mono border border-chrome-border rounded mb-1"
+              className="w-full px-2.5 py-1.5 text-xs font-mono bg-chrome-input border border-chrome-border rounded mb-1"
               value={ai.baseURL}
               onChange={(e) => setAIConfig({ baseURL: e.target.value })}
             />
@@ -149,7 +149,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <label className="block text-xs text-chrome-muted mb-1">Personal Access Token（可选）</label>
             <input
               type="password"
-              className="w-full px-2.5 py-1.5 text-sm border border-chrome-border rounded mb-1"
+              className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded mb-1"
               placeholder="ghp_...（仅存本机，提高限流并读私有仓）"
               value={githubPAT}
               onChange={(e) => setGithubPAT(e.target.value)}

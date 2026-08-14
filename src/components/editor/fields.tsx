@@ -22,7 +22,7 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 const inputCls =
-  'w-full px-2.5 py-1.5 text-sm bg-white border border-chrome-border rounded ' +
+  'w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded ' +
   'outline-none focus:border-chrome-ink focus:ring-1 focus:ring-chrome-ink/20 transition-colors'
 
 export function TextInput({

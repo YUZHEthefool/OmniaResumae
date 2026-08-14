@@ -157,7 +157,7 @@ export function TemplateStudioDialog({ onClose }: { onClose: () => void }) {
             {/* 描述 */}
             <div className="flex-1 flex flex-col gap-2">
               <textarea
-                className="flex-1 min-h-[72px] w-full p-2 text-sm border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-accent"
+                className="flex-1 min-h-[72px] w-full p-2 text-sm bg-chrome-input border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-accent"
                 placeholder={t('tsDescriptionPh', locale)}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -194,7 +194,7 @@ export function TemplateStudioDialog({ onClose }: { onClose: () => void }) {
           {candidate && (
             <div className="flex items-end gap-2">
               <textarea
-                className="flex-1 min-h-[44px] max-h-24 p-2 text-xs border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-accent"
+                className="flex-1 min-h-[44px] max-h-24 p-2 text-xs bg-chrome-input border border-chrome-border rounded resize-none focus:outline-none focus:border-chrome-accent"
                 placeholder={t('tsRefinePh', locale)}
                 value={refine}
                 onChange={(e) => setRefine(e.target.value)}

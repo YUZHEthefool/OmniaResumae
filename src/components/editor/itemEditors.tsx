@@ -84,7 +84,7 @@ export function ProjectEditor({ item, update }: { item: ProjectItem; update: Upd
         </Field>
         <Field label="卡片色条">
           <select
-            className="w-full px-2.5 py-1.5 text-sm bg-white border border-chrome-border rounded outline-none"
+            className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
             value={item.badge ?? 'oss'}
             onChange={(e) => update({ badge: e.target.value as ProjectItem['badge'] })}
           >
@@ -96,7 +96,7 @@ export function ProjectEditor({ item, update }: { item: ProjectItem; update: Upd
       </div>
       <Field label="归属">
         <select
-          className="w-full px-2.5 py-1.5 text-sm bg-white border border-chrome-border rounded outline-none"
+          className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
           value={item.kind ?? 'own'}
           onChange={(e) => update({ kind: e.target.value as ProjectItem['kind'] })}
         >
