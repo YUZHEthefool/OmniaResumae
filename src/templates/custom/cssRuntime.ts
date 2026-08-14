@@ -16,16 +16,23 @@ import { useEffect } from 'react'
  */
 export function sanitizeCSS(raw: string): string {
   let s = raw
-  // 1. 剥全部 @import
-  s = s.replace(/@import\b[^;]*;/gi, '/* @import stripped */')
-  // 2. 剥 url(...) 里的远程 http(s) 引用（保留 data:）
-  s = s.replace(/url\(\s*(['"]?)\s*https?:\/\/[^)]*\1\s*\)/gi, '/* remote url stripped */')
+  // 1. 剥全部 @import（字体单独经 buildFontHref 处理）；允许无分号结尾（EOF 处的 @import 也剥）
+  s = s.replace(/@import\b[^;]*;?/gi, '/* @import stripped */')
+  // 2. 剥 url(...) 里的远程引用：http(s) 与协议相对 //（后者浏览器会解析为 https，仅剥 https? 不够）；
+  //    保留 data: 与本地绝对/相对路径（无 //）
+  s = s.replace(/url\(\s*(['"]?)\s*(?:https?:)?\/\/[^)]*\1\s*\)/gi, '/* remote url stripped */')
   // 3. 剥危险 token
   s = s.replace(/expression\s*\(/gi, '/* expression( */')
   s = s.replace(/javascript:/gi, '/* javascript: */')
   s = s.replace(/vbscript:/gi, '/* vbscript: */')
   s = s.replace(/-moz-binding\s*:/gi, '/* -moz-binding: */')
+  s = s.replace(/behavior\s*:/gi, '/* behavior: */')
   return s
+}
+
+/** 由 style 的 data-tpl-id 推断 @scope 根类：对话框预览用 .tpl-custom-preview，生成模板用 .tpl-custom */
+function scopeRootFor(id: string): string {
+  return id === '__preview__' ? '.tpl-custom-preview' : '.tpl-custom'
 }
 
 /**
@@ -55,7 +62,10 @@ export function useScopedStyle(id: string, css: string, fonts: string[]): void {
   useEffect(() => {
     const style = document.createElement('style')
     style.setAttribute('data-tpl-id', id)
-    style.textContent = sanitizeCSS(css)
+    // 用 @scope 把 AI 产出的全部选择器限制在根类后代内：即使模型写 body/*/:root/未作用域选择器，
+    // 也只会影响 .tpl-custom（或预览 .tpl-custom-preview）内部，无法重排应用 chrome。
+    // @font-face/@keyframes 仍正常工作；对 html2canvas（读 computed style）透明。2026 浏览器全面支持。
+    style.textContent = `@scope ${scopeRootFor(id)} { ${sanitizeCSS(css)} }`
     document.head.appendChild(style)
 
     let link: HTMLLinkElement | null = null
