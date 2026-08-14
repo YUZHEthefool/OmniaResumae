@@ -40,7 +40,6 @@ export function CopilotPanel() {
   const importSkillFromText = useSkillStore((s) => s.importSkillFromText)
 
   const chatSessions = useChatStore((s) => s.sessions)
-  const getSession = useChatStore((s) => s.getSession)
   const setSession = useChatStore((s) => s.setSession)
   const clearSession = useChatStore((s) => s.clearSession)
 
@@ -54,10 +53,14 @@ export function CopilotPanel() {
 
   // 对话按简历 id 绑定：切换简历自动加载/保留各自历史
   const resumeId = current?.id ?? '__none__'
-  const session = chatSessions[resumeId] ?? getSession(resumeId)
-  const entries = session.entries
-  const messages = session.messages
-  const prevSnapshot = session.prevSnapshot
+  const session = chatSessions[resumeId]
+  const entries = session?.entries ?? []
+  const prevSnapshot = session?.prevSnapshot ?? null
+
+  // 确保该简历的会话存在：在 effect 内创建，避免 render 期 set 触发 StrictMode 警告
+  useEffect(() => {
+    if (!useChatStore.getState().sessions[resumeId]) useChatStore.getState().getSession(resumeId)
+  }, [resumeId])
 
   const builtins = getBuiltins()
   const allSkills: Skill[] = [...builtins, ...userSkills]
@@ -115,7 +118,10 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
   }
 
   const appendEntry = (e2: ChatEntry) => {
-    setSession(resumeId, { entries: [...entries, e2] })
+    // 从 store 读最新 entries，避免闭包到 render 期的旧 entries；
+    // 否则一轮内多条事件（user→tool_call→tool_result→assistant）会互相覆盖、用户消息丢失。
+    const cur = useChatStore.getState().sessions[resumeId]?.entries ?? []
+    setSession(resumeId, { entries: [...cur, e2] })
   }
 
   const appendEvent = (e: AgentEvent) => {
@@ -141,6 +147,8 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
     }
     appendEntry({ id: entryId(), kind: 'user', text })
     setInput('')
+    // 从 store 取会话消息历史（确保引用持久、跨轮累积；在 handler 内取，不在 render 期创建）
+    const messages = useChatStore.getState().getSession(resumeId).messages
     messages.push({ role: 'user', content: text })
 
     // 确保/更新 system 首消息
@@ -206,7 +214,7 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
   }
 
   return (
-    <aside className="w-[360px] flex-shrink-0 h-full border-l border-copilot-border bg-copilot-bg flex flex-col text-copilot-ink">
+    <aside className="w-[360px] flex-shrink-0 h-full border-l border-copilot-border bg-copilot-bg flex flex-col text-copilot-ink" style={{ colorScheme: 'dark' }}>
       <header className="flex items-center justify-between px-3 h-11 border-b border-copilot-border bg-copilot-bg">
         <h2 className="text-xs font-semibold flex items-center gap-1.5 text-copilot-ink">
           <Sparkles size={14} className="text-copilot-accent" /> {t('copilot', locale)}
