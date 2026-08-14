@@ -10,6 +10,7 @@ export default {
         chrome: {
           bg: 'var(--chrome-bg)',
           panel: 'var(--chrome-panel)',
+          input: 'var(--chrome-input)',
           border: 'var(--chrome-border)',
           ink: 'var(--chrome-ink)',
           muted: 'var(--chrome-muted)',
