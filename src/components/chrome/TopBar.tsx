@@ -5,7 +5,7 @@
  */
 import { useState, useRef, useEffect, type RefObject } from 'react'
 import { clsx } from 'clsx'
-import { useResumeStore } from '@/store/resumeStore'
+import { useResumeStore, type SaveStatus } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { listTemplates, unregisterTemplate } from '@/templates/registry'
 import { exportPDF, printResume, exportImage } from '@/export/pdf'
@@ -14,6 +14,7 @@ import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { TemplateStudioDialog } from '@/components/dialogs/TemplateStudioDialog'
 import { useTemplateStore } from '@/store/templateStore'
+import { slugify } from '@/utils/slug'
 import { t } from '@/i18n'
 import { Github, Sparkles, Sun, Moon } from 'lucide-react'
 
@@ -34,6 +35,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const select = useResumeStore((s) => s.select)
   const create = useResumeStore((s) => s.create)
   const remove = useResumeStore((s) => s.remove)
+  const duplicate = useResumeStore((s) => s.duplicate)
+  const saveStatus = useResumeStore((s) => s.saveStatus)
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
@@ -81,6 +84,17 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       setExporting(false)
     }
   }
+  const doExportJson = () => {
+    if (!current) return
+    setMenu(null)
+    const blob = new Blob([JSON.stringify(current, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slugify(current.name) || 'resume'}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div ref={barRef} className="flex items-center gap-1 px-3 h-12 bg-chrome-panel border-b border-chrome-border text-chrome-ink">
@@ -111,6 +125,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
       <Divider />
 
+      {/* 保存状态指示 */}
+      <SaveStatusBadge status={saveStatus} locale={locale} />
+
       {/* 简历列表 */}
       <div className="relative">
         <button
@@ -126,6 +143,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 key={r.id}
                 active={r.id === current?.id}
                 onClick={() => { void select(r.id); setMenu(null) }}
+                onCopy={() => { void duplicate(r.id) }}
                 onRemove={() => { void remove(r.id) }}
               >
                 {r.name}
@@ -235,6 +253,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportImage}>
               导出图片（PNG）
             </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJson}>
+              {t('exportJson', locale)}
+            </button>
             <div className="border-t border-chrome-border my-1" />
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>
               打印 / 另存为 PDF（矢量可选）
@@ -277,11 +298,12 @@ function Dropdown({ children, align = 'left' }: { children: React.ReactNode; ali
 }
 
 function DropdownItem({
-  children, active, onClick, onRemove,
+  children, active, onClick, onCopy, onRemove,
 }: {
   children: React.ReactNode
   active?: boolean
   onClick: () => void
+  onCopy?: () => void
   onRemove?: () => void
 }) {
   return (
@@ -289,6 +311,15 @@ function DropdownItem({
       <button className="flex-1 text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={onClick}>
         {children}
       </button>
+      {onCopy && (
+        <button
+          className="px-1.5 py-1 text-chrome-muted opacity-0 group-hover:opacity-100 hover:text-chrome-ink text-xs"
+          onClick={(e) => { e.stopPropagation(); onCopy() }}
+          title="复制"
+        >
+          ⧉
+        </button>
+      )}
       {onRemove && (
         <button
           className="px-2 py-1 text-chrome-muted opacity-0 group-hover:opacity-100 hover:text-red-600 text-xs"
@@ -299,5 +330,29 @@ function DropdownItem({
         </button>
       )}
     </div>
+  )
+}
+
+/** 保存状态徽章：保存中（脉冲灰）/ 已保存（绿，1.5s 后隐）/ 保存失败（红） */
+function SaveStatusBadge({ status, locale }: { status: SaveStatus; locale: 'zh' | 'en' }) {
+  const [display, setDisplay] = useState<SaveStatus>(status)
+  useEffect(() => {
+    setDisplay(status)
+    if (status === 'saved') {
+      const id = setTimeout(() => setDisplay('idle'), 1500)
+      return () => clearTimeout(id)
+    }
+  }, [status])
+  if (display === 'idle') return null
+  const cfg = {
+    saving: { cls: 'text-chrome-muted', dot: 'bg-chrome-muted', pulse: true, text: t('saving', locale) },
+    saved: { cls: 'text-green-600', dot: 'bg-green-500', pulse: false, text: t('saved', locale) },
+    error: { cls: 'text-red-600', dot: 'bg-red-500', pulse: false, text: t('saveFailed', locale) },
+  }[display]
+  return (
+    <span className={`flex items-center gap-1 text-[11px] ${cfg.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} ${cfg.pulse ? 'animate-pulse' : ''}`} />
+      {cfg.text}
+    </span>
   )
 }
