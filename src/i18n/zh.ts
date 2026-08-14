@@ -17,6 +17,12 @@ export const zh = {
   exportPdf: '导出 PDF',
   print: '打印 / 另存 PDF',
   settings: '设置',
+  duplicate: '复制',
+  exportJson: '导出 JSON（备份）',
+  saving: '保存中…',
+  saved: '已保存',
+  saveFailed: '保存失败',
+  dragHandle: '拖拽排序',
 
   // 编辑面板
   basics: '基本信息',

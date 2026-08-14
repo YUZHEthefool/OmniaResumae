@@ -18,6 +18,12 @@ export const en: Dict = {
   exportPdf: 'Export PDF',
   print: 'Print / Save as PDF',
   settings: 'Settings',
+  duplicate: 'Duplicate',
+  exportJson: 'Export JSON (backup)',
+  saving: 'Saving…',
+  saved: 'Saved',
+  saveFailed: 'Save failed',
+  dragHandle: 'Drag to reorder',
 
   basics: 'Basics',
   basicsName: 'Name',
