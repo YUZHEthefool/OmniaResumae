@@ -175,7 +175,7 @@ export const TranslateProposalSchema = z.object({
 export const GeneratedTemplateSchema = z.object({
   name: z.object({ zh: z.string(), en: z.string() }),
   style: z.string().default(''),
-  css: z.string().min(1),
+  css: z.string().min(1).max(200_000),
   fonts: z.array(z.string()).default([]),
 })
 
