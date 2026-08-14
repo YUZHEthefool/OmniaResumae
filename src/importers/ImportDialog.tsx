@@ -13,9 +13,10 @@ import { useSettingsStore } from '@/store/settingsStore'
 import { parseMarkdownToFragment, type ImportFragment } from './markdown'
 import { parseLatexToFragment } from './latex'
 import { parsePdfToFragment, extractPdfText } from './pdf'
+import { parseResumeJSON } from './json'
 import { structureViaAI } from '@/ai/aiStructure'
 
-type Source = 'markdown' | 'latex' | 'pdf' | 'paste'
+type Source = 'markdown' | 'latex' | 'pdf' | 'paste' | 'json'
 
 export function ImportDialog({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState<Source>('markdown')
@@ -32,6 +33,12 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   const handleFile = async (f: File) => {
     setBusy(true); setErr(''); setInfo('')
     try {
+      // 文件大小上限：防超大 PDF/文件撑爆内存卡死页
+      const limit = source === 'pdf' ? 25 * 1024 * 1024 : 5 * 1024 * 1024
+      if (f.size > limit) {
+        setErr(`文件过大（${(f.size / 1024 / 1024).toFixed(1)}MB），上限 ${limit / 1024 / 1024}MB`)
+        return
+      }
       if (source === 'markdown') {
         setRaw(await f.text())
         setFrag(parseMarkdownToFragment(await f.text()))
@@ -40,9 +47,25 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
         setRaw(await f.text())
         setFrag(parseLatexToFragment(await f.text()))
         setAIResume(null)
+      } else if (source === 'json') {
+        // JSON：本工具导出格式的完整 Resume，直接结构化（走 aiResume 合并路径）
+        const text = await f.text()
+        setRaw(text)
+        const r = parseResumeJSON(text, locale)
+        setAIResume(r)
+        setFrag(null)
+        setInfo('✓ 已解析 JSON 简历')
       } else if (source === 'pdf') {
         // PDF：只提取原文，结构化交给 AI（主路径）。启发式仅作无 key 时兜底。
         const txt = await extractPdfText(f)
+        if (!txt.trim()) {
+          // 扫描件无文字层：不要把空文本交给 AI（会幻觉），明确提示
+          setRaw('')
+          setFrag(null)
+          setAIResume(null)
+          setErr('未提取到文本——该 PDF 可能是扫描件（无文字层）。请改用 OCR 后的文本或粘贴文本走 AI 结构化。')
+          return
+        }
         setRaw(txt)
         setFrag(null)
         setAIResume(null)
@@ -68,8 +91,15 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   const runPaste = () => {
     setErr('')
     try {
-      if (source === 'markdown') setFrag(parseMarkdownToFragment(raw))
+      if (source === 'markdown' || source === 'paste') setFrag(parseMarkdownToFragment(raw))
       else if (source === 'latex') setFrag(parseLatexToFragment(raw))
+      else if (source === 'json') {
+        const r = parseResumeJSON(raw, locale)
+        setAIResume(r)
+        setFrag(null)
+        setInfo('✓ 已解析 JSON 简历')
+        return
+      }
       setAIResume(null)
     } catch (e) {
       setErr((e as Error).message)
@@ -100,10 +130,13 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
     if (!aiResume && !frag) return
     merge((d) => {
       if (aiResume) {
-        // AI 结构化：整份覆盖或追加
+        // AI/JSON 结构化：整份覆盖或追加
         if (mode === 'replace') {
-          d.basics = aiResume.basics
-          d.sections = aiResume.sections
+          // 保留 AI/JSON 产物无法承载的字段：basics.profiles，以及未被覆盖的现有段
+          // （matches/domains/workflow/community 等扩展段 AI 罕见产出）。incoming 有则用 incoming。
+          d.basics = { ...aiResume.basics, profiles: aiResume.basics.profiles ?? d.basics.profiles }
+          const aiTypes = new Set(aiResume.sections.map((s) => s.type))
+          d.sections = [...aiResume.sections, ...d.sections.filter((s) => !aiTypes.has(s.type))]
         } else {
           // append：追加 sections，basics 字段缺失才补
           d.basics = { ...aiResume.basics, ...d.basics }
@@ -115,11 +148,19 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           }
         }
       } else if (frag) {
-        if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
-        for (const s of frag.sections) {
-          const exist = d.sections.find((x) => x.type === s.type)
-          if (exist) exist.items.push(...(s.items as never[]))
-          else d.sections.push(s as never)
+        // 启发式片段：replace 时清空被覆盖的同 type 段再写入，避免残留旧条目
+        if (mode === 'replace') {
+          if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
+          const fragTypes = new Set(frag.sections.map((s) => s.type))
+          d.sections = d.sections.filter((s) => !fragTypes.has(s.type))
+          for (const s of frag.sections) d.sections.push(s as never)
+        } else {
+          if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
+          for (const s of frag.sections) {
+            const exist = d.sections.find((x) => x.type === s.type)
+            if (exist) exist.items.push(...(s.items as never[]))
+            else d.sections.push(s as never)
+          }
         }
       }
     })
@@ -141,6 +182,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               ['markdown', 'Markdown'],
               ['latex', 'LaTeX'],
               ['pdf', 'PDF'],
+              ['json', 'JSON 备份'],
               ['paste', '粘贴文本'],
             ] as [Source, string][]).map(([k, label]) => (
               <button
@@ -162,7 +204,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
               <input
                 ref={fileRef}
                 type="file"
-                accept={source === 'pdf' ? '.pdf' : source === 'latex' ? '.tex' : '.md,.markdown,.txt'}
+                accept={source === 'pdf' ? '.pdf' : source === 'latex' ? '.tex' : source === 'json' ? '.json' : '.md,.markdown,.txt'}
                 className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f) }}
               />
@@ -181,7 +223,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
           ) : (
             <div>
               <textarea
-                className="w-full h-40 p-2 text-xs font-mono border border-chrome-border rounded"
+                className="w-full h-40 p-2 text-xs font-mono bg-chrome-input border border-chrome-border rounded"
                 placeholder={source === 'paste' ? '粘贴简历文本（Markdown / LaTeX / 纯文本）' : ''}
                 value={raw}
                 onChange={(e) => setRaw(e.target.value)}
