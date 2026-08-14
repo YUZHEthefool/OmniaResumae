@@ -21,6 +21,31 @@ function mergeLoc(base: Localized | undefined, patch: Localized | undefined): Lo
   return { zh: patch.zh ?? base?.zh, en: patch.en ?? base?.en }
 }
 
+/** basics 中属于 Localized 的字段名（按定义判断，而非按当前值——避免空字段被当非 Localized 写入裸字符串导致 pick 失效） */
+const LOC_BASICS_KEYS = new Set(['name', 'label', 'summary', 'location'])
+/** 条目中属于 Localized 的标量字段名（跨各 section type 的并集） */
+const LOC_ITEM_KEYS = new Set([
+  'name', 'position', 'institution', 'area', 'studyType', 'description',
+  'title', 'tag', 'body', 'label', 'text', 'sub', 'level', 'awarder', 'publisher', 'summary', 'location',
+])
+
+/** 把模型可能传错的 highlights（字符串数组 / 对象数组）规范化为 Localized[]；按索引保留旧值另一语言 */
+function coerceHighlights(
+  v: unknown,
+  locale: Locale,
+  prev: Localized[] = [],
+): Localized[] {
+  if (!Array.isArray(v)) return []
+  return v.map((h, i) => {
+    if (h && typeof h === 'object' && ('zh' in h || 'en' in h)) {
+      const o = h as Localized
+      return { zh: o.zh, en: o.en }
+    }
+    if (typeof h === 'string') return { ...(prev[i] ?? {}), [locale]: h } as Localized
+    return prev[i] ?? { zh: undefined, en: undefined }
+  })
+}
+
 /** 镜像 createItem：按 type 给带 uid + 必填骨架的条目 */
 function baseItem(type: string): Record<string, unknown> {
   switch (type) {
@@ -120,8 +145,15 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
         useResumeStore.getState().update((d) => {
           const b = d.basics as unknown as Record<string, unknown>
           for (const [k, v] of Object.entries(patch)) {
-            if (isLocalized(b[k]) && isLocalized(v)) b[k] = mergeLoc(b[k] as Localized, v as Localized)
-            else if (v !== undefined) b[k] = v
+            if (v === undefined) continue
+            if (LOC_BASICS_KEYS.has(k)) {
+              // Localized 字段：接受 {zh,en} 合并或字符串按当前语种写入（保留另一语言），
+              // 绝不写裸字符串（否则 pick 返回 ''、名字消失、schema 拒绝）
+              if (isLocalized(v)) b[k] = mergeLoc(b[k] as Localized | undefined, v as Localized)
+              else if (typeof v === 'string') b[k] = mergeLoc(b[k] as Localized | undefined, { [locale]: v } as Localized)
+            } else {
+              b[k] = v
+            }
           }
         })
         return 'ok: basics 已更新'
@@ -139,10 +171,21 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
         additionalProperties: false,
       },
       run: (args) => {
-        const { targetRole, keywords } = args as { targetRole?: Localized; keywords?: Localized[] }
+        const { targetRole, keywords } = args as { targetRole?: Localized; keywords?: unknown[] }
         useResumeStore.getState().update((d) => {
-          if (targetRole) d.meta.targetRole = mergeLoc(d.meta.targetRole, targetRole)
-          if (keywords) d.meta.keywords = keywords
+          if (targetRole) {
+            if (isLocalized(targetRole)) d.meta.targetRole = mergeLoc(d.meta.targetRole, targetRole)
+            else if (typeof targetRole === 'string') d.meta.targetRole = mergeLoc(d.meta.targetRole, { [locale]: targetRole } as Localized)
+          }
+          if (keywords) {
+            // 按语种逐条合并（保留另一语言），而非整组替换丢失旧条目
+            const prev = d.meta.keywords ?? []
+            d.meta.keywords = (keywords as unknown[]).map((k, i): Localized => {
+              if (k && typeof k === 'object' && ('zh' in k || 'en' in k)) return mergeLoc(prev[i], k as Localized) ?? { zh: undefined, en: undefined }
+              if (typeof k === 'string') return mergeLoc(prev[i], { [locale]: k } as Localized) ?? { zh: undefined, en: undefined }
+              return prev[i] ?? { zh: undefined, en: undefined }
+            })
+          }
         })
         return 'ok: meta 已更新'
       },
@@ -273,9 +316,15 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
           if (!it) return
           found = true
           for (const [k, v] of Object.entries(patch)) {
-            if (k === 'id') continue
-            if (isLocalized(it[k]) && isLocalized(v)) it[k] = mergeLoc(it[k] as Localized, v as Localized)
-            else it[k] = v
+            if (k === 'id' || v === undefined) continue
+            if (LOC_ITEM_KEYS.has(k)) {
+              if (isLocalized(v)) it[k] = mergeLoc(it[k] as Localized | undefined, v as Localized)
+              else if (typeof v === 'string') it[k] = mergeLoc(it[k] as Localized | undefined, { [locale]: v } as Localized)
+            } else if (k === 'highlights') {
+              it[k] = coerceHighlights(v, locale, (it[k] as Localized[]) ?? [])
+            } else {
+              it[k] = v
+            }
           }
         })
         return found ? 'ok' : '未找到 item'
@@ -295,7 +344,7 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
         additionalProperties: false,
       },
       run: (args) => {
-        const { section_id, item_id, highlights } = args as { section_id: string; item_id: string; highlights: Localized[] }
+        const { section_id, item_id, highlights } = args as { section_id: string; item_id: string; highlights: unknown[] }
         let found = false
         useResumeStore.getState().update((d) => {
           const s = d.sections.find((x) => x.id === section_id)
@@ -303,7 +352,7 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
           const it = s.items.find((x) => (x as { id: string }).id === item_id) as { highlights?: Localized[] } | undefined
           if (!it) return
           found = true
-          it.highlights = highlights.map((h) => ({ zh: h.zh, en: h.en }))
+          it.highlights = coerceHighlights(highlights, locale, it.highlights ?? [])
         })
         return found ? 'ok' : '未找到 item'
       },
