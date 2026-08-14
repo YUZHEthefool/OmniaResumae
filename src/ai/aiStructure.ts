@@ -8,6 +8,7 @@ import { chat, extractJSON } from './providers'
 import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, SectionType } from '@/types/resume'
 import { uid, nowStamp } from '@/schema/defaults'
+import { validateAIResume } from '@/schema/validate'
 
 export const SCHEMA_HINT = `{
   "basics": {
@@ -79,10 +80,14 @@ ${rawText.slice(0, 24000)}
       json: true,
       temperature: 0.1,
     })
-    parsed = JSON.parse(extractJSON(retry))
+    try {
+      parsed = JSON.parse(extractJSON(retry))
+    } catch {
+      throw new Error('AI 两次均未返回合法 JSON，请重试')
+    }
   }
 
-  return normalizeToResume(parsed, locale)
+  return validateAIResume(normalizeToResume(parsed, locale))
 }
 
 /** 把 AI 返回的松散对象规范化成合法 Resume（补 id/时间戳，确保字段完整） */

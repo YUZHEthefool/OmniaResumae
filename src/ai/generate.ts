@@ -60,7 +60,11 @@ ${sourceText ? sourceText.slice(0, 24000) : '（无）'}
       json: true,
       temperature: 0.1,
     })
-    parsed = JSON.parse(extractJSON(retry))
+    try {
+      parsed = JSON.parse(extractJSON(retry))
+    } catch {
+      throw new Error('AI 两次均未返回合法 JSON，请重试')
+    }
   }
 
   return validateAIResume(normalizeToResume(parsed, locale))
