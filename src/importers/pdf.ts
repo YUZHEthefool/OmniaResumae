@@ -9,6 +9,7 @@ import type { ImportFragment } from './markdown'
 
 export interface PdfBlock {
   text: string
+  x: number
   y: number
   page: number
   size: number
@@ -34,23 +35,29 @@ export async function extractPdfBlocks(file: File): Promise<PdfBlock[]> {
   const pdfjs = await loadPdfjs()
   const buf = await file.arrayBuffer()
   const pdf = await pdfjs.getDocument({ data: buf }).promise
-  const blocks: PdfBlock[] = []
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p)
-    const content = await page.getTextContent()
-    for (const item of content.items as Array<{ str: string; transform: number[]; height: number; fontName?: string }>) {
-      const text = item.str
-      if (!text.trim()) continue
-      blocks.push({
-        text,
-        y: item.transform[5],
-        page: p,
-        size: Math.round(item.height * 10) / 10,
-        bold: /bold|semibold|heavy/i.test(item.fontName ?? ''),
-      })
+  try {
+    const blocks: PdfBlock[] = []
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p)
+      const content = await page.getTextContent()
+      for (const item of content.items as Array<{ str: string; transform: number[]; height: number; fontName?: string }>) {
+        const text = item.str
+        if (!text.trim()) continue
+        blocks.push({
+          text,
+          x: item.transform[4],
+          y: item.transform[5],
+          page: p,
+          size: Math.round(item.height * 10) / 10,
+          bold: /bold|semibold|heavy/i.test(item.fontName ?? ''),
+        })
+      }
     }
+    return blocks
+  } finally {
+    // 释放 worker/页资源，避免大 PDF 内存堆积
+    pdf.destroy?.()
   }
-  return blocks
 }
 
 /** 合并同一行的块，返回"文本行"列表 */
@@ -62,7 +69,8 @@ export function mergeLines(blocks: PdfBlock[]): { text: string; y: number; page:
   }
   return Object.entries(lines)
     .map(([key, bs]) => {
-      bs.sort(() => 0) // 保持原 x 顺序
+      // 按 x 坐标升序拼接（多列/RTL 才不会乱序）；旧 sort(()=>0) 是空操作
+      bs.sort((a, b) => a.x - b.x)
       const text = bs.map((b) => b.text).join('')
       const [page, y] = key.split(':').map(Number)
       return { text: text.trim(), y, page, size: Math.max(...bs.map((b) => b.size)) }
