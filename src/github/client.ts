@@ -28,31 +28,61 @@ function headers(pat: string): HeadersInit {
   return pat ? { Accept: 'application/vnd.github+json', Authorization: `Bearer ${pat}` } : { Accept: 'application/vnd.github+json' }
 }
 
+/** 从 Link 响应头解析 rel="next" 的下一页 URL；无则 null */
+function parseNextLink(link: string | null): string | null {
+  if (!link) return null
+  const m = link.match(/<([^>]+)>;\s*rel="next"/)
+  return m ? m[1] : null
+}
+
+/** 已拿到首页响应后，跟随 Link rel="next" 翻页（封顶 maxPages 防滥用），累积结果 */
+async function pagedFrom<T>(firstRes: Response, pat: string, maxPages = 10): Promise<T[]> {
+  let out = (await firstRes.json()) as T[]
+  let next = parseNextLink(firstRes.headers.get('Link'))
+  for (let i = 0; i < maxPages - 1 && next; i++) {
+    const res = await fetch(next, { headers: headers(pat) })
+    if (!res.ok) break
+    out = out.concat((await res.json()) as T[])
+    next = parseNextLink(res.headers.get('Link'))
+  }
+  return out
+}
+
+/** base64 → UTF-8 字符串：atob 得到 Latin-1 二进制串，需经 TextDecoder 还原 CJK/多字节，否则中文 README 乱码 */
+function decodeBase64Utf8(b64: string): string {
+  try {
+    const bin = atob(b64)
+    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0))
+    return new TextDecoder('utf-8').decode(bytes)
+  } catch {
+    return ''
+  }
+}
+
 /** 列出用户相关仓库：自己的 + 所属组织的（无 PAT 也能查任意公开用户）。
- *  组织仓库通过 /users/{u}/orgs → /orgs/{org}/repos 获取。
+ *  组织仓库通过 /users/{u}/orgs → /orgs/{org}/repos 获取；全程跟随 Link 分页。
  *  去重后按 star 降序。 */
 export async function listUserRepos(username: string, pat: string): Promise<GHRepo[]> {
   const u = encodeURIComponent(username)
-  // 1) 自己的仓库
-  const ownRes = await fetch(`${API}/users/${u}/repos?per_page=100&sort=updated`, { headers: headers(pat) })
-  if (ownRes.status === 404) throw new Error(`用户 ${username} 不存在`)
-  if (!ownRes.ok) {
-    if (ownRes.status === 403) throw new Error('GitHub 限流或 PAT 无效（403）。可稍后重试或填入有效 PAT。')
-    throw new Error(`GitHub API ${ownRes.status}`)
+  // 1) 自己的仓库（首页单独判 404/403 以给出准确提示，再跟随分页）
+  const first = await fetch(`${API}/users/${u}/repos?per_page=100&sort=updated`, { headers: headers(pat) })
+  if (first.status === 404) throw new Error(`用户 ${username} 不存在`)
+  if (!first.ok) {
+    if (first.status === 403) throw new Error('GitHub 限流或 PAT 无效（403）。可稍后重试或填入有效 PAT。')
+    throw new Error(`GitHub API ${first.status}`)
   }
-  const own = (await ownRes.json()) as GHRepo[]
+  const own = await pagedFrom<GHRepo>(first, pat)
 
-  // 2) 所属组织 → 每个组织的仓库
+  // 2) 所属组织 → 每个组织的仓库（含分页，单组织失败不阻塞）
   let orgRepos: GHRepo[] = []
   try {
-    const orgsRes = await fetch(`${API}/users/${u}/orgs?per_page=100`, { headers: headers(pat) })
-    if (orgsRes.ok) {
-      const orgs = (await orgsRes.json()) as { login: string }[]
-      // 并行拉每个组织仓库
+    const orgsFirst = await fetch(`${API}/users/${u}/orgs?per_page=100`, { headers: headers(pat) })
+    if (orgsFirst.ok) {
+      const orgs = await pagedFrom<{ login: string }>(orgsFirst, pat)
       const results = await Promise.all(
         orgs.map((o) =>
           fetch(`${API}/orgs/${encodeURIComponent(o.login)}/repos?per_page=100&sort=updated`, { headers: headers(pat) })
-            .then((r) => (r.ok ? (r.json() as Promise<GHRepo[]>) : []))
+            .then((r) => (r.ok ? pagedFrom<GHRepo>(r, pat) : []))
             .catch(() => [] as GHRepo[]),
         ),
       )
@@ -69,16 +99,19 @@ export async function listUserRepos(username: string, pat: string): Promise<GHRe
 }
 
 /** 带 PAT 时列出当前认证用户的全部相关仓库：
- *  含 owner(自己的) + collaborator(参与贡献的) + organization_member(所属组织的)。
- *  affiliation 参数一把覆盖"参与/贡献/组织"三类。 */
+ *  含 owner(自己的) + collaborator(参与贡献的) + organization_member(所属组织的)——含私有仓。
+ *  走 /user/repos（而非 /users/{login}/repos，后者即便带 PAT 也只返回公开仓）。 */
 export async function listMyRepos(pat: string): Promise<GHRepo[]> {
   if (!pat) throw new Error('列出自己的仓库需要 PAT')
-  const res = await fetch(
+  const first = await fetch(
     `${API}/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member`,
     { headers: headers(pat) },
   )
-  if (!res.ok) throw new Error(`GitHub API ${res.status}（PAT 可能无效）`)
-  const data = (await res.json()) as GHRepo[]
+  if (!first.ok) {
+    if (first.status === 403) throw new Error('GitHub 限流或 PAT 无效（403）')
+    throw new Error(`GitHub API ${first.status}（PAT 可能无效）`)
+  }
+  const data = await pagedFrom<GHRepo>(first, pat)
   const map = new Map<number, GHRepo>()
   for (const r of data) {
     if (!r.fork && !r.archived) map.set(r.id, r)
@@ -103,14 +136,14 @@ export async function getRepoDetail(repo: GHRepo, pat: string): Promise<GHRepoDe
   const langData = langRes.ok ? ((await langRes.json()) as Record<string, number>) : {}
   const languages = Object.keys(langData)
 
-  // readme（base64 或直接 json，API 返回 base64 content）
+  // readme（API 返回 base64 content；需 UTF-8 解码，否则 CJK 乱码）
   let readme = ''
   try {
     const rmRes = await fetch(`${API}/repos/${owner}/${name}/readme`, { headers: headers(pat) })
     if (rmRes.ok) {
       const rm = (await rmRes.json()) as { content?: string; encoding?: string }
       if (rm.content) {
-        readme = rm.encoding === 'base64' ? atob(rm.content.replace(/\n/g, '')) : rm.content
+        readme = rm.encoding === 'base64' ? decodeBase64Utf8(rm.content.replace(/\n/g, '')) : rm.content
       }
     }
   } catch { /* ignore */ }
@@ -175,27 +208,35 @@ export async function getRepoByName(owner: string, name: string, pat: string): P
 }
 
 /** 统一入口：own + org + contributed，去重，按 star 降序。
- *  - username 非空（useMine 时从 /user 取）→ own/org 走 listUserRepos 逻辑 + 贡献搜索
- *  - pat 为空时贡献搜索受 60/h 限流，但仍尝试 */
-export async function listAllRepos(username: string, pat: string): Promise<GHRepo[]> {
-  // 1) own + org（复用 listUserRepos 的拉取）
+ *  - useMine && pat：own/org 走 listMyRepos（/user/repos，含私有 + collaborator + 组织成员），
+ *    贡献搜索以 authLogin 为 author。
+ *  - 否则：own/org 走 listUserRepos（公开），贡献搜索以 username 为 author。
+ *  - own/org 拉取失败（如限流）且啥也没拿到时，抛出真实原因，而非误报"没有可见仓库"。 */
+export async function listAllRepos(username: string, pat: string, useMine = false, authLogin = ''): Promise<GHRepo[]> {
   let ownAndOrg: GHRepo[] = []
-  if (username) {
-    try {
-      ownAndOrg = await listUserRepos(username, pat)
-    } catch { /* 用户名查失败时仍尝试贡献搜索 */ }
+  let ownError: Error | null = null
+  try {
+    if (useMine && pat) ownAndOrg = await listMyRepos(pat)
+    else if (username) ownAndOrg = await listUserRepos(username, pat)
+  } catch (e) {
+    ownError = e as Error
   }
-  // 2) contributed（PR）
+
   let contrib: GHRepo[] = []
   try {
-    const contributed = await searchContributedRepos(username, pat)
-    // 并行取每个仓库详情（过滤掉已在 ownAndOrg 的）
-    const existing = new Set(ownAndOrg.map((r) => r.full_name.toLowerCase()))
-    const toFetch = contributed.filter((c) => !existing.has(`${c.owner}/${c.name}`.toLowerCase()))
-    contrib = (await Promise.all(
-      toFetch.map((c) => getRepoByName(c.owner, c.name, pat).catch(() => null)),
-    )).filter((r): r is GHRepo => !!r && !r.fork && !r.archived)
+    const author = useMine && pat ? authLogin : username
+    if (author) {
+      const contributed = await searchContributedRepos(author, pat)
+      // 并行取每个仓库详情（过滤掉已在 ownAndOrg 的）
+      const existing = new Set(ownAndOrg.map((r) => r.full_name.toLowerCase()))
+      const toFetch = contributed.filter((c) => !existing.has(`${c.owner}/${c.name}`.toLowerCase()))
+      contrib = (await Promise.all(
+        toFetch.map((c) => getRepoByName(c.owner, c.name, pat).catch(() => null)),
+      )).filter((r): r is GHRepo => !!r && !r.fork && !r.archived)
+    }
   } catch { /* 贡献搜索失败不阻塞 */ }
+
+  if (!ownAndOrg.length && !contrib.length && ownError) throw ownError
 
   const map = new Map<number, GHRepo>()
   for (const r of [...ownAndOrg, ...contrib]) map.set(r.id, r)

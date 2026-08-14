@@ -42,11 +42,12 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
         setMyLogin('')
       }
       const target = useMine ? login : username.trim()
-      if (!target) { setErr('请填用户名或勾选用 PAT 列我的仓库'); return }
-      // 统一入口：own + org + contributed(PR)，覆盖各种贡献方式
-      const list = await listAllRepos(target, pat)
+      if (!target && !(useMine && pat)) { setErr('请填用户名或勾选用 PAT 列我的仓库'); return }
+      // 统一入口：own + org + contributed(PR)，覆盖各种贡献方式。
+      // useMine+PAT 时走 /user/repos（含私有仓 + collaborator + 组织成员），贡献搜索以认证 login 为 author。
+      const list = await listAllRepos(username.trim(), pat, useMine, login)
       setRepos(list)
-      if (!list.length) setErr('没有可见仓库')
+      if (!list.length) setErr(useMine ? '没有可见仓库（或 PAT 无权限 / 被限流）' : '没有可见仓库')
     } catch (e) {
       setErr((e as Error).message)
     } finally {
@@ -70,7 +71,8 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
       const items: ProjectItem[] = []
       for (const r of picks) {
         const detail = await getRepoDetail(r, pat)
-        const isOwn = ownerLogin ? r.owner?.login?.toLowerCase() === ownerLogin.toLowerCase() : true
+        // 仅当确知 ownerLogin 且匹配时才标 own；拿不到 login（/user 失败）时标 contrib，避免误标
+        const isOwn = !!ownerLogin && r.owner?.login?.toLowerCase() === ownerLogin.toLowerCase()
         items.push({
           id: uid('proj'),
           name: { zh: r.name, en: r.name },
@@ -119,7 +121,7 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
           </div>
           {!useMine && (
             <input
-              className="w-full px-2.5 py-1.5 text-sm border border-chrome-border rounded"
+              className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
               placeholder="GitHub 用户名，如 octocat"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -127,7 +129,7 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
           )}
           <input
             type="password"
-            className="w-full px-2.5 py-1.5 text-sm border border-chrome-border rounded"
+            className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
             placeholder="Personal Access Token（可选，提高限流并读私有仓；仅存本机）"
             value={pat}
             onChange={(e) => setPat(e.target.value)}
