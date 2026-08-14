@@ -16,9 +16,14 @@ export function uid(prefix = 'id'): string {
 }
 
 let _stamp = 1_700_000_000_000
-/** 暴露给纯函数的时间戳（避免直接依赖 Date.now，便于复现） */
+/**
+ * 单调递增时间戳：以 Date.now() 为基准，但保证同会话内连续调用严格递增
+ * （Date.now 同毫秒多次调用会相等，影响 updatedAt 排序）。
+ * 跨会话正确（不再用固定起点计数器，否则旧会话编辑会排在新会话之上）。
+ */
 export function nowStamp(): number {
-  _stamp += 1
+  const now = Date.now()
+  _stamp = now > _stamp ? now : _stamp + 1
   return _stamp
 }
 
