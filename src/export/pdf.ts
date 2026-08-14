@@ -70,6 +70,9 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   const clone = node.cloneNode(true) as HTMLElement
   clone.style.transform = 'none'
   clone.style.width = '100%'
+  // 去除"编辑预览"模式留在 ref 节点上的虚线 outline 与 contenteditable，避免被导出
+  clone.style.outline = 'none'
+  clone.removeAttribute('contenteditable')
   holder.appendChild(clone)
   document.body.appendChild(holder)
 
@@ -118,7 +121,9 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     const imgW = pageW
     const imgH = (canvas.height * imgW) / canvas.width
     const step = pageH - 6
-    const pages = Math.max(1, Math.ceil((imgH - 6) / step))
+    let pages = Math.max(1, Math.ceil((imgH - 6) / step))
+    // 末页近空白（<24pt）则裁掉，避免多出一页几乎全白的尾页
+    if (pages > 1 && Math.min(pageH, imgH - (pages - 1) * step) < 24) pages -= 1
     for (let pageIndex = 0; pageIndex < pages; pageIndex++) {
       if (pageIndex > 0) pdf.addPage()
       const position = pageIndex * step
@@ -185,6 +190,9 @@ export async function exportImage(node: HTMLElement, resume: Resume, locale: Loc
   const clone = node.cloneNode(true) as HTMLElement
   clone.style.transform = 'none'
   clone.style.width = '100%'
+  // 去除"编辑预览"模式留在 ref 节点上的虚线 outline 与 contenteditable
+  clone.style.outline = 'none'
+  clone.removeAttribute('contenteditable')
   holder.appendChild(clone)
   document.body.appendChild(holder)
 
@@ -220,15 +228,16 @@ export async function exportImage(node: HTMLElement, resume: Resume, locale: Loc
   }
 
   const name = slugify(pick(resume.basics.name, locale, 'resume'))
-  canvas.toBlob((blob) => {
-    if (!blob) return
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${name}_${locale}.png`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, 'image/png')
+  // 用 await 取 blob：内容过大时浏览器 canvas 超限，toBlob 回调得 null——此时抛错让调用方提示，
+  // 而非静默无下载。
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/png'))
+  if (!blob) throw new Error('导出图片失败：内容可能过大、超出浏览器画布限制，请改用多页 PDF')
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${name}_${locale}.png`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 /** 打印另存：打开隔离打印窗口（仅简历 DOM + 模板 CSS），调浏览器打印对话框 */
