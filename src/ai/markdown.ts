@@ -10,6 +10,13 @@ marked.setOptions({
   gfm: true,
 })
 
+// 强制给 target=_blank 的 <a> 加 rel="noopener noreferrer"，防 tabnabbing（DOMPurify 已剥 javascript:/data: href）
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+  if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+    node.setAttribute('rel', 'noopener noreferrer')
+  }
+})
+
 export function renderMarkdown(md: string): string {
   if (!md) return ''
   const raw = marked.parse(md, { async: false }) as string
