@@ -25,6 +25,8 @@ export interface ChatOptions {
   json?: boolean
   /** 最多重试一次（解析失败时） */
   temperature?: number
+  /** 中断信号：透传到 fetch，支持 Stop 中断在途请求 */
+  signal?: AbortSignal
 }
 
 /** 调用 AI，返回文本内容 */
@@ -67,9 +69,10 @@ export async function chatWithTools(
   messages: NeutralMsg[],
   tools: ToolSpec[],
   temperature = 0.4,
+  signal?: AbortSignal,
 ): Promise<ToolCallResult> {
-  if (config.kind === 'anthropic') return chatWithToolsAnthropic(config, messages, tools, temperature)
-  return chatWithToolsOpenAI(config, messages, tools, temperature)
+  if (config.kind === 'anthropic') return chatWithToolsAnthropic(config, messages, tools, temperature, signal)
+  return chatWithToolsOpenAI(config, messages, tools, temperature, signal)
 }
 
 async function chatWithToolsOpenAI(
@@ -77,6 +80,7 @@ async function chatWithToolsOpenAI(
   messages: NeutralMsg[],
   tools: ToolSpec[],
   temperature: number,
+  signal?: AbortSignal,
 ): Promise<ToolCallResult> {
   const body: Record<string, unknown> = {
     model: config.model,
@@ -92,6 +96,7 @@ async function chatWithToolsOpenAI(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
     body: JSON.stringify(body),
+    signal,
   })
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
@@ -119,6 +124,7 @@ async function chatWithToolsAnthropic(
   messages: NeutralMsg[],
   tools: ToolSpec[],
   temperature: number,
+  signal?: AbortSignal,
 ): Promise<ToolCallResult> {
   const { system, msgs } = toAnthropicMessages(messages)
   const body: Record<string, unknown> = {
@@ -138,6 +144,7 @@ async function chatWithToolsAnthropic(
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify(body),
+    signal,
   })
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
@@ -258,6 +265,7 @@ async function chatOpenAICompatible(config: AIProviderConfig, opts: ChatOptions)
       Authorization: `Bearer ${config.apiKey}`,
     },
     body: JSON.stringify(body),
+    signal: opts.signal,
   })
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
@@ -304,21 +312,25 @@ async function chatAnthropic(config: AIProviderConfig, opts: ChatOptions): Promi
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify(body),
+    signal: opts.signal,
   })
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
     throw new Error(`Anthropic ${res.status}: ${err.slice(0, 200)}`)
   }
   const data = await res.json()
-  // tool_use 优先
+  // tool_use 优先：Claude 在强制 tool_choice 下仍可能先吐文本前导，必须遍历全部块优先取 tool_use，
+  // 否则命中第一个 text 块返回散文，调用方 JSON.parse 失败。
+  let text: string | null = null
   for (const block of data?.content ?? []) {
     if (block.type === 'tool_use' && block.input) {
       return JSON.stringify(block.input)
     }
-    if (block.type === 'text' && typeof block.text === 'string') {
-      return block.text
+    if (text === null && block.type === 'text' && typeof block.text === 'string') {
+      text = block.text
     }
   }
+  if (text !== null) return text
   throw new Error('Anthropic 空响应')
 }
 
