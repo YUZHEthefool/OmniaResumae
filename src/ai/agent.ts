@@ -39,7 +39,7 @@ export async function runAgentStream(
 
   for (let step = 0; step < maxSteps; step++) {
     if (opts.signal?.aborted) break
-    const res = await chatWithTools(config, opts.messages, opts.tools, temp)
+    const res = await chatWithTools(config, opts.messages, opts.tools, temp, opts.signal)
 
     if (res.toolCalls.length === 0) {
       finalText = res.content
