@@ -4,7 +4,7 @@
  * - LText / LTextArea / LDate / TagsInput / ImageUpload
  * 设计：受控，onChange 直接回写 store（由父组件传入 setter）。
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
 import type { Localized, Locale } from '@/types/resume'
 import { useUIStore } from '@/store/uiStore'
@@ -75,6 +75,8 @@ export function LocalizedInput({
 }) {
   const globalLocale = useUIStore((s) => s.locale)
   const [tab, setTab] = useState<Locale>(globalLocale)
+  // 切换顶栏语言时，已有字段的 zh/en 子 tab 跟随，避免新建字段与旧字段显示不同 tab
+  useEffect(() => { setTab(globalLocale) }, [globalLocale])
   return (
     <div>
       <div className="flex gap-1 mb-1">
@@ -163,6 +165,11 @@ export function TagsInput({
             }
           }
         }}
+        onBlur={(e) => {
+          // 失焦时把未按回车的文字也提交，避免输入到一半点别处丢失
+          const raw = e.currentTarget.value.trim()
+          if (raw) { onChange([...value, raw]); e.currentTarget.value = '' }
+        }}
       />
     </div>
   )
@@ -197,6 +204,7 @@ export function ImageUpload({
               const reader = new FileReader()
               reader.onload = () => onChange(String(reader.result))
               reader.readAsDataURL(f)
+              e.target.value = '' // 重置，否则移除后再选同一张图不触发 change
             }}
           />
         </label>
@@ -214,50 +222,3 @@ export function ImageUpload({
   )
 }
 
-/* ─── 条目容器（带删除/上下移） ─── */
-export function ItemCard({
-  title, onDelete, onUp, onDown, children,
-}: {
-  title: string
-  onDelete: () => void
-  onUp: () => void
-  onDown: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div className="border border-chrome-border rounded p-3 bg-white mb-2.5">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-chrome-ink truncate">{title}</span>
-        <div className="flex gap-1 text-chrome-muted">
-          <IconBtn onClick={onUp} title="上移">▲</IconBtn>
-          <IconBtn onClick={onDown} title="下移">▼</IconBtn>
-          <IconBtn onClick={onDelete} title="删除" danger>✕</IconBtn>
-        </div>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function IconBtn({
-  children, onClick, title, danger,
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  title: string
-  danger?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      className={clsx(
-        'w-6 h-6 flex items-center justify-center rounded text-[11px] hover:bg-chrome-bg',
-        danger && 'hover:text-red-600',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
