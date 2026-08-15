@@ -237,7 +237,8 @@ export async function exportImage(node: HTMLElement, resume: Resume, locale: Loc
   a.href = url
   a.download = `${name}_${locale}.png`
   a.click()
-  URL.revokeObjectURL(url)
+  // 延迟释放：部分浏览器（Safari）下载尚未开始读 blob 就 revoke 会失败
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 /** 打印另存：打开隔离打印窗口（仅简历 DOM + 模板 CSS），调浏览器打印对话框 */
@@ -248,7 +249,16 @@ export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
     return
   }
   const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
-    .map((el) => el.outerHTML)
+    .map((el) => {
+      if (el instanceof HTMLLinkElement) {
+        // 生产构建里 link href 是 /assets/index-HASH.css，写进 about:blank 会按 about:blank 解析而加载失败；
+        // .href getter 返回绝对 URL，克隆后改写，确保打印窗口能加载样式
+        const c = el.cloneNode(true) as HTMLLinkElement
+        c.href = el.href
+        return c.outerHTML
+      }
+      return el.outerHTML
+    })
     .join('\n')
 
   win.document.write(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8">
