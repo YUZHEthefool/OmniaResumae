@@ -173,7 +173,9 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
         signal: abortRef.current.signal,
       })
     } catch (e) {
-      appendEntry({ id: entryId(), kind: 'error', message: (e as Error).message })
+      // Stop 触发的 AbortError 不再追加红色错误条目（stop() 已加"已停止"，避免重复误报）
+      const aborted = (e as Error)?.name === 'AbortError' || !!abortRef.current?.signal.aborted
+      if (!aborted) appendEntry({ id: entryId(), kind: 'error', message: (e as Error).message })
     } finally {
       setRunning(false)
       abortRef.current = null

@@ -119,20 +119,32 @@ export async function generateTemplateStyle(
   }
 
   let usedVision = !!imageDataUrl
+  // 模板 CSS 可能较长，给足输出上限避免被截断成不完整 JSON
+  const chatOnce = (withImage: boolean) =>
+    chat(config, { messages: buildMessages(withImage), json: true, temperature: 0.6, maxTokens: 16000 })
   let raw: string
   try {
-    raw = await chat(config, { messages: buildMessages(usedVision), json: true, temperature: 0.6 })
+    raw = await chatOnce(usedVision)
   } catch (e) {
     // 非视觉模型带图会报错 → 去图重试一次
     if (imageDataUrl) {
       usedVision = false
-      raw = await chat(config, { messages: buildMessages(false), json: true, temperature: 0.6 })
+      raw = await chatOnce(false)
     } else {
       throw e
     }
   }
 
-  const parsed = JSON.parse(extractJSON(raw))
+  const parseOnce = (text: string): unknown => {
+    try { return JSON.parse(extractJSON(text)) } catch { return null }
+  }
+  let parsed = parseOnce(raw)
+  if (parsed === null) {
+    // 模型可能返回散文或解释 → 重试一次提示只输出 JSON
+    const retry = await chatOnce(usedVision)
+    parsed = parseOnce(retry)
+    if (parsed === null) throw new Error('AI 未返回合法 JSON，请重试')
+  }
   const template = GeneratedTemplateSchema.parse(parsed) as GeneratedTemplateInput
   return { template, usedVision }
 }
