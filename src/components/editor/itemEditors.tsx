@@ -38,7 +38,7 @@ export function WorkEditor({ item, update }: { item: WorkItem; update: Updater<W
         <TextInput value={item.url ?? ''} onChange={(v) => update({ url: v })} placeholder="https://..." />
       </Field>
       <Field label="要点（逐条）">
-        <LocalizedList items={item.highlights} onChange={(v) => update({ highlights: v })} multiline />
+        <LocalizedList items={item.highlights ?? []} onChange={(v) => update({ highlights: v })} multiline />
       </Field>
     </div>
   )
@@ -128,7 +128,7 @@ export function ProjectEditor({ item, update }: { item: ProjectItem; update: Upd
         </Field>
       </div>
       <Field label="亮点（逐条）">
-        <LocalizedList items={item.highlights} onChange={(v) => update({ highlights: v })} multiline />
+        <LocalizedList items={item.highlights ?? []} onChange={(v) => update({ highlights: v })} multiline />
       </Field>
     </div>
   )

@@ -126,7 +126,7 @@ function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; loca
 
 function ProjectView({ item, locale }: { item: ProjectItem; locale: Locale }) {
   const link = item.url || item.repoUrl
-  const points = item.highlights.filter((h) => L(h, locale))
+  const points = (item.highlights ?? []).filter((h) => L(h, locale))
   return (
     <div className="project">
       <div className="project-head">

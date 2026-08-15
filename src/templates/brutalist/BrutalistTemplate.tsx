@@ -226,7 +226,7 @@ function ProjectCard({ item, locale }: { item: ProjectItem; locale: Locale }) {
     : badge === 'patent' || badge === 'pat' ? (locale === 'zh' ? '专利' : 'Patent')
     : 'Open Source'
   const link = item.url || item.repoUrl
-  const highlights = item.highlights.filter((h) => L(h, locale))
+  const highlights = (item.highlights ?? []).filter((h) => L(h, locale))
   return (
     <div className={`project-card ${badgeClass}`}>
       <div className="project-inner">
@@ -408,8 +408,9 @@ function FallbackList({ section, locale }: { section: Section; locale: Locale })
       {items.map((it, i) => (
         <div className="match-item" key={i}>
           <div className="match-body">
-            {Object.values(it)
-              .map((v) => (v && typeof v === 'object' ? L(v as never, locale) : String(v ?? '')))
+            {Object.entries(it)
+              .filter(([k]) => k !== 'id')
+              .map(([, v]) => (v && typeof v === 'object' ? L(v as never, locale) : String(v ?? '')))
               .filter(Boolean)
               .join(' · ')}
           </div>
