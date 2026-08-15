@@ -1,6 +1,6 @@
 /**
  * 各 section type 的条目编辑器
- * 每个编辑器接收 (item, onChange, localeActions)。
+ * 每个编辑器接收 (item, update)；locale 取自 useUIStore 以本地化字段标签。
  * item 操作（增/删/移）由 SectionEditor 通过 helpers 提供。
  */
 import type { Locale } from '@/types/resume'
@@ -11,33 +11,36 @@ import type {
 } from '@/types/resume'
 import { Field, LocalizedInput, TextInput, DateInput, TagsInput } from './fields'
 import { uid } from '@/schema/defaults'
+import { t } from '@/i18n'
+import { useUIStore } from '@/store/uiStore'
 
 type Updater<T> = (patch: Partial<T>) => void
 
 /* ───────── Work ───────── */
 export function WorkEditor({ item, update }: { item: WorkItem; update: Updater<WorkItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="公司">
+        <Field label={t('fldCompany', locale)}>
           <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
         </Field>
-        <Field label="职位">
+        <Field label={t('fldPosition', locale)}>
           <LocalizedInput value={item.position} onChange={(v) => update({ position: v })} />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="开始">
+        <Field label={t('fldStart', locale)}>
           <DateInput value={item.startDate ?? ''} onChange={(v) => update({ startDate: v })} />
         </Field>
-        <Field label="结束（至今留空）">
+        <Field label={t('fldEndPresent', locale)}>
           <DateInput value={item.endDate ?? ''} onChange={(v) => update({ endDate: v })} />
         </Field>
       </div>
-      <Field label="链接（可选）">
+      <Field label={t('fldLinkOptional', locale)}>
         <TextInput value={item.url ?? ''} onChange={(v) => update({ url: v })} placeholder="https://..." />
       </Field>
-      <Field label="要点（逐条）">
+      <Field label={t('fldHighlights', locale)}>
         <LocalizedList items={item.highlights ?? []} onChange={(v) => update({ highlights: v })} multiline />
       </Field>
     </div>
@@ -46,28 +49,29 @@ export function WorkEditor({ item, update }: { item: WorkItem; update: Updater<W
 
 /* ───────── Education ───────── */
 export function EducationEditor({ item, update }: { item: EducationItem; update: Updater<EducationItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="学校">
+        <Field label={t('fldSchool', locale)}>
           <LocalizedInput value={item.institution} onChange={(v) => update({ institution: v })} />
         </Field>
-        <Field label="学位">
+        <Field label={t('fldDegree', locale)}>
           <LocalizedInput value={item.studyType ?? {}} onChange={(v) => update({ studyType: v })} />
         </Field>
       </div>
-      <Field label="专业">
+      <Field label={t('fldMajor', locale)}>
         <LocalizedInput value={item.area} onChange={(v) => update({ area: v })} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="开始">
+        <Field label={t('fldStart', locale)}>
           <DateInput value={item.startDate ?? ''} onChange={(v) => update({ startDate: v })} />
         </Field>
-        <Field label="结束">
+        <Field label={t('fldEndPresent', locale)}>
           <DateInput value={item.endDate ?? ''} onChange={(v) => update({ endDate: v })} />
         </Field>
       </div>
-      <Field label="要点">
+      <Field label={t('fldHighlights', locale)}>
         <LocalizedList items={item.highlights ?? []} onChange={(v) => update({ highlights: v })} multiline />
       </Field>
     </div>
@@ -76,50 +80,51 @@ export function EducationEditor({ item, update }: { item: EducationItem; update:
 
 /* ───────── Project ───────── */
 export function ProjectEditor({ item, update }: { item: ProjectItem; update: Updater<ProjectItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="项目名">
+        <Field label={t('fldProjectName', locale)}>
           <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
         </Field>
-        <Field label="卡片色条">
+        <Field label={t('fldBadge', locale)}>
           <select
             className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
             value={item.badge ?? 'oss'}
             onChange={(e) => update({ badge: e.target.value as ProjectItem['badge'] })}
           >
-            <option value="oss">Open Source（黄）</option>
-            <option value="dev">开发中（红）</option>
-            <option value="patent">专利（黑）</option>
+            <option value="oss">{t('badgeOss', locale)}</option>
+            <option value="dev">{t('badgeDev', locale)}</option>
+            <option value="patent">{t('badgePatent', locale)}</option>
           </select>
         </Field>
       </div>
-      <Field label="归属">
+      <Field label={t('fldKind', locale)}>
         <select
           className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
           value={item.kind ?? 'own'}
           onChange={(e) => update({ kind: e.target.value as ProjectItem['kind'] })}
         >
-          <option value="own">个人项目（我是 owner）</option>
-          <option value="contrib">参与 / 贡献（他人或组织拥有）</option>
+          <option value="own">{t('kindOwn', locale)}</option>
+          <option value="contrib">{t('kindContrib', locale)}</option>
         </select>
       </Field>
-      <Field label="一句话描述">
+      <Field label={t('fldDescription', locale)}>
         <LocalizedInput value={item.description} onChange={(v) => update({ description: v })} multiline rows={2} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="仓库/主页 URL">
+        <Field label={t('fldRepoUrl', locale)}>
           <TextInput value={item.repoUrl ?? ''} onChange={(v) => update({ repoUrl: v })} placeholder="github.com/..." />
         </Field>
-        <Field label="演示 URL">
+        <Field label={t('fldDemoUrl', locale)}>
           <TextInput value={item.url ?? ''} onChange={(v) => update({ url: v })} placeholder="https://..." />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="技术栈">
+        <Field label={t('fldStack', locale)}>
           <TagsInput value={item.keywords ?? []} onChange={(v) => update({ keywords: v })} />
         </Field>
-        <Field label="Stars（数字，可空）">
+        <Field label={t('fldStars', locale)}>
           <TextInput
             type="number"
             value={item.stars !== undefined ? String(item.stars) : ''}
@@ -127,7 +132,7 @@ export function ProjectEditor({ item, update }: { item: ProjectItem; update: Upd
           />
         </Field>
       </div>
-      <Field label="亮点（逐条）">
+      <Field label={t('fldHighlights', locale)}>
         <LocalizedList items={item.highlights ?? []} onChange={(v) => update({ highlights: v })} multiline />
       </Field>
     </div>
@@ -136,16 +141,17 @@ export function ProjectEditor({ item, update }: { item: ProjectItem; update: Upd
 
 /* ───────── Skill ───────── */
 export function SkillEditor({ item, update }: { item: SkillItem; update: Updater<SkillItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div className="grid grid-cols-2 gap-2">
-      <Field label="技能名">
+      <Field label={t('fldSkillName', locale)}>
         <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
       </Field>
-      <Field label="说明 / 熟练度">
+      <Field label={t('fldSkillLevel', locale)}>
         <LocalizedInput value={item.level ?? {}} onChange={(v) => update({ level: v })} multiline rows={2} />
       </Field>
       <div className="col-span-2">
-        <Field label="关键词（技术栈）">
+        <Field label={t('fldKeywords', locale)}>
           <TagsInput value={item.keywords ?? []} onChange={(v) => update({ keywords: v })} />
         </Field>
       </div>
@@ -155,16 +161,17 @@ export function SkillEditor({ item, update }: { item: SkillItem; update: Updater
 
 /* ───────── Award ───────── */
 export function AwardEditor({ item, update }: { item: AwardItem; update: Updater<AwardItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
-      <Field label="奖项名">
+      <Field label={t('fldAwardName', locale)}>
         <LocalizedInput value={item.title} onChange={(v) => update({ title: v })} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="颁发方">
+        <Field label={t('fldAwarder', locale)}>
           <LocalizedInput value={item.awarder ?? {}} onChange={(v) => update({ awarder: v })} />
         </Field>
-        <Field label="日期">
+        <Field label={t('fldDate', locale)}>
           <DateInput value={item.date ?? ''} onChange={(v) => update({ date: v })} />
         </Field>
       </div>
@@ -174,16 +181,17 @@ export function AwardEditor({ item, update }: { item: AwardItem; update: Updater
 
 /* ───────── Publication / Patent ───────── */
 export function PublicationEditor({ item, update }: { item: PublicationItem; update: Updater<PublicationItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
-      <Field label="名称">
+      <Field label={t('fldName', locale)}>
         <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} multiline rows={2} />
       </Field>
       <div className="grid grid-cols-2 gap-2">
-        <Field label="日期">
+        <Field label={t('fldDate', locale)}>
           <DateInput value={item.date ?? ''} onChange={(v) => update({ date: v })} />
         </Field>
-        <Field label="URL">
+        <Field label={t('fldUrl', locale)}>
           <TextInput value={item.url ?? ''} onChange={(v) => update({ url: v })} />
         </Field>
       </div>
@@ -193,12 +201,13 @@ export function PublicationEditor({ item, update }: { item: PublicationItem; upd
 
 /* ───────── Match ───────── */
 export function MatchEditor({ item, update }: { item: MatchItem; update: Updater<MatchItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
-      <Field label="要求标签">
+      <Field label={t('fldMatchTag', locale)}>
         <LocalizedInput value={item.tag} onChange={(v) => update({ tag: v })} />
       </Field>
-      <Field label="自我匹配说明">
+      <Field label={t('fldMatchBody', locale)}>
         <LocalizedInput value={item.body} onChange={(v) => update({ body: v })} multiline rows={2} />
       </Field>
     </div>
@@ -207,15 +216,16 @@ export function MatchEditor({ item, update }: { item: MatchItem; update: Updater
 
 /* ───────── Domain ───────── */
 export function DomainEditor({ item, update }: { item: DomainItem; update: Updater<DomainItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2">
-        <Field label="领域名">
+        <Field label={t('fldDomainName', locale)}>
           <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
         </Field>
       </div>
       <div className="col-span-2">
-        <Field label="副标题">
+        <Field label={t('fldDomainSub', locale)}>
           <LocalizedInput value={item.sub} onChange={(v) => update({ sub: v })} />
         </Field>
       </div>
@@ -225,12 +235,13 @@ export function DomainEditor({ item, update }: { item: DomainItem; update: Updat
 
 /* ───────── Workflow ───────── */
 export function WorkflowEditor({ item, update }: { item: WorkflowStep; update: Updater<WorkflowStep> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
-      <Field label="步骤标签">
+      <Field label={t('fldStepLabel', locale)}>
         <LocalizedInput value={item.label} onChange={(v) => update({ label: v })} />
       </Field>
-      <Field label="步骤说明">
+      <Field label={t('fldStepText', locale)}>
         <LocalizedInput value={item.text} onChange={(v) => update({ text: v })} multiline rows={2} />
       </Field>
     </div>
@@ -239,15 +250,16 @@ export function WorkflowEditor({ item, update }: { item: WorkflowStep; update: U
 
 /* ───────── Community ───────── */
 export function CommunityEditor({ item, update }: { item: CommunityItem; update: Updater<CommunityItem> }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div className="grid grid-cols-3 gap-2">
-      <Field label="平台">
+      <Field label={t('fldPlatform', locale)}>
         <TextInput value={item.platform} onChange={(v) => update({ platform: v })} placeholder="GitHub" />
       </Field>
-      <Field label="Handle">
+      <Field label={t('fldHandle', locale)}>
         <TextInput value={item.handle} onChange={(v) => update({ handle: v })} placeholder="octocat" />
       </Field>
-      <Field label="URL">
+      <Field label={t('fldUrl', locale)}>
         <TextInput value={item.url} onChange={(v) => update({ url: v })} placeholder="https://..." />
       </Field>
     </div>
@@ -262,6 +274,7 @@ export function LocalizedList({
   onChange: (v: { zh?: string; en?: string }[]) => void
   multiline?: boolean
 }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       {items.map((it, i) => (
@@ -278,7 +291,7 @@ export function LocalizedList({
             type="button"
             className="mt-5 w-6 h-6 text-[11px] text-chrome-muted hover:text-red-600 rounded hover:bg-chrome-bg"
             onClick={() => onChange(items.filter((_, j) => j !== i))}
-            title="删除"
+            title={t('deleteItem', locale)}
           >
             ✕
           </button>
@@ -289,7 +302,7 @@ export function LocalizedList({
         className="text-xs text-chrome-ink hover:underline"
         onClick={() => onChange([...items, { zh: '', en: '' }])}
       >
-        + 添加
+        + {t('add', locale)}
       </button>
     </div>
   )
