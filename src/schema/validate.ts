@@ -203,13 +203,21 @@ const ITEM_SCHEMAS: Partial<Record<SectionType, z.ZodTypeAny>> = {
 /**
  * 加固 AI 生成的完整 Resume：先校验骨架（失败即抛），再按 section.type 逐条目 safeParse。
  * 单条目畸形则丢弃该条目、保留其余（生成器可能产 10+ 段落，一条坏的不该毁掉整份提案）。
+ *
+ * 关键：保留 safeParse 成功后的 **parsed data**（r.data），而非原始对象。
+ * 因为带 .default([]) 的字段（如 highlights）在原始对象上可能缺失——safeParse 成功是默认值
+ * 填在了 parsed 结果里，若保留原始对象，highlights 仍是 undefined，下游 .filter 会崩溃。
+ * parsed 还会剥离未知键，输出更干净。
  */
 export function validateAIResume(data: unknown): Resume {
   const skeleton = ResumeSchema.parse(data) as Resume
   const sections = skeleton.sections.map((sec) => {
     const schema = ITEM_SCHEMAS[sec.type]
     if (!schema) return sec
-    const valid = (sec.items as unknown[]).filter((it) => schema.safeParse(it).success)
+    const valid = (sec.items as unknown[])
+      .map((it) => schema.safeParse(it))
+      .filter((r) => r.success)
+      .map((r) => (r as { success: true; data: unknown }).data)
     return { ...sec, items: valid as never[] }
   })
   return { ...skeleton, sections }
