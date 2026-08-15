@@ -124,38 +124,38 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
           {open ? '▾' : '▸'}
         </button>
         <span className="text-xs font-mono px-1.5 py-0.5 bg-chrome-ink text-white rounded">
-          {section.layout === 'main' ? '主' : '侧'}
+          {section.layout === 'main' ? t('layoutMain', locale) : t('layoutSidebar', locale)}
         </span>
         <span className="text-sm font-semibold text-chrome-ink flex-1 truncate">
           {section.title[locale] || section.title.zh || section.title.en || section.type}
         </span>
         <button
           type="button"
-          title="显示/隐藏"
+          title={t('toggleVisible', locale)}
           className={clsx('text-xs px-1.5', section.visible ? 'text-chrome-ink' : 'text-chrome-muted line-through')}
           onClick={() => toggleVisible(section.id)}
         >
           {section.visible ? '👁' : '⊘'}
         </button>
-        <button type="button" title="上移" className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, -1)}>▲</button>
-        <button type="button" title="下移" className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, 1)}>▼</button>
-        <button type="button" title="删除段落" className="text-xs text-chrome-muted hover:text-red-600 px-1" onClick={() => removeSection(section.id)}>✕</button>
+        <button type="button" title={t('moveUp', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, -1)}>▲</button>
+        <button type="button" title={t('moveDown', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, 1)}>▼</button>
+        <button type="button" title={t('deleteSection', locale)} className="text-xs text-chrome-muted hover:text-red-600 px-1" onClick={() => removeSection(section.id)}>✕</button>
       </div>
 
       {open && (
         <div className="p-3">
           <div className="grid grid-cols-2 gap-2 mb-2">
-            <Field label="段落标题">
+            <Field label={t('sectionTitle', locale)}>
               <LocalizedInput value={section.title} onChange={(v) => setSection((s) => { s.title = v })} />
             </Field>
-            <Field label="布局">
+            <Field label={t('layout', locale)}>
               <select
                 className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded outline-none"
                 value={section.layout}
                 onChange={(e) => setSection((s) => { s.layout = e.target.value as 'main' | 'sidebar' })}
               >
-                <option value="main">主栏</option>
-                <option value="sidebar">侧栏</option>
+                <option value="main">{t('layoutMain', locale)}</option>
+                <option value="sidebar">{t('layoutSidebar', locale)}</option>
               </select>
             </Field>
           </div>
@@ -192,11 +192,11 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
                 className="text-xs text-chrome-ink hover:underline"
                 onClick={addItem}
               >
-                + 添加条目
+                + {t('addItem', locale)}
               </button>
             </>
           ) : (
-            <p className="text-xs text-chrome-muted">该类型暂无可视化编辑器（{section.type}）。</p>
+            <p className="text-xs text-chrome-muted">{t('noEditorForType', locale).replace('{type}', section.type)}</p>
           )}
         </div>
       )}
