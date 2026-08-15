@@ -1,9 +1,9 @@
 /**
  * TopBar：顶部工具栏
- * 简历列表 / 语言 / 模板 / 缩放 / 导入 / GitHub / AI / 导出 / 设置
- * 导入·GitHub·AI·设置 在后续 Phase 接入；当前为占位按钮。
+ * 简历列表 / 语言 / 模板 / 缩放 / 导入 / GitHub / 模板工坊 / AI / 导出 / 设置
+ * 导入 / GitHub / 模板工坊 / 设置 均已接入弹窗；导出在顶栏下拉。
  */
-import { useState, useRef, useEffect, type RefObject } from 'react'
+import { useState, useRef, useEffect, useMemo, type RefObject } from 'react'
 import { clsx } from 'clsx'
 import { useResumeStore, type SaveStatus } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
@@ -51,7 +51,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
-  const templates = listTemplates()
+  // 订阅生成模板：增删时重渲染（listTemplates 读 registry，不订阅则删非当前模板下拉不刷新）
+  const generated = useTemplateStore((s) => s.generated)
+  const templates = useMemo(() => listTemplates(), [generated])
 
   const doExport = async (mode: 'single' | 'multi') => {
     if (!current || !previewRef.current) return
@@ -93,7 +95,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     a.href = url
     a.download = `${slugify(current.name) || 'resume'}.json`
     a.click()
-    URL.revokeObjectURL(url)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   return (
@@ -189,6 +191,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 onRemove={
                   tp.meta.id.startsWith('gen_')
                     ? () => {
+                        setMenu(null)
                         useTemplateStore.getState().removeGenerated(tp.meta.id)
                         unregisterTemplate(tp.meta.id)
                         if (templateId === tp.meta.id) setTemplate('serif-classic')
