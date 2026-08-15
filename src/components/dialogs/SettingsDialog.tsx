@@ -67,7 +67,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
                 type={showKey ? 'text' : 'password'}
                 className="flex-1 px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
                 placeholder="粘贴你的 API Key（仅存本机浏览器）"
-                value={ai.apiKey}
+                value={ai.apiKey ?? ''}
                 onChange={(e) => setAIConfig({ apiKey: e.target.value })}
               />
               <button className="px-2 py-1.5 text-xs border border-chrome-border rounded" onClick={() => setShowKey((s) => !s)}>
@@ -81,7 +81,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <input
               className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded mb-1"
               placeholder="如 gpt-4o-mini / deepseek-chat / glm-4-plus / claude-sonnet-5"
-              value={ai.model}
+              value={ai.model ?? ''}
               onChange={(e) => setAIConfig({ model: e.target.value })}
             />
             <div className="flex items-center gap-2 mb-1">
@@ -130,7 +130,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             <label className="block text-xs text-chrome-muted mb-1">Base URL（高级，可改）</label>
             <input
               className="w-full px-2.5 py-1.5 text-xs font-mono bg-chrome-input border border-chrome-border rounded mb-1"
-              value={ai.baseURL}
+              value={ai.baseURL ?? ''}
               onChange={(e) => setAIConfig({ baseURL: e.target.value })}
             />
             <a className="text-xs text-chrome-accent hover:underline" href={preset?.apiKeyURL} target="_blank" rel="noreferrer">
