@@ -8,21 +8,21 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import type { Resume, SectionType, Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
-import { t } from '@/i18n'
+import { t, type UIKey } from '@/i18n'
 import { Field, LocalizedInput, TextInput, ImageUpload } from './fields'
 import { SectionEditor } from './SectionEditor'
 
-const ADDABLE: { type: SectionType; label: string }[] = [
-  { type: 'skills', label: '技能' },
-  { type: 'projects', label: '项目' },
-  { type: 'work', label: '工作经历' },
-  { type: 'education', label: '教育' },
-  { type: 'workflow', label: '工作流' },
-  { type: 'matches', label: '要求匹配' },
-  { type: 'domains', label: '领域' },
-  { type: 'awards', label: '奖项' },
-  { type: 'publications', label: '专利/出版物' },
-  { type: 'community', label: '社区' },
+const ADDABLE: { type: SectionType; labelKey: UIKey }[] = [
+  { type: 'skills', labelKey: 'typeSkills' },
+  { type: 'projects', labelKey: 'typeProjects' },
+  { type: 'work', labelKey: 'typeWork' },
+  { type: 'education', labelKey: 'typeEducation' },
+  { type: 'workflow', labelKey: 'typeWorkflow' },
+  { type: 'matches', labelKey: 'typeMatches' },
+  { type: 'domains', labelKey: 'typeDomains' },
+  { type: 'awards', labelKey: 'typeAwards' },
+  { type: 'publications', labelKey: 'typePublications' },
+  { type: 'community', labelKey: 'typeCommunity' },
 ]
 
 export function EditorPanel() {
@@ -39,7 +39,7 @@ export function EditorPanel() {
   )
 
   if (!resume) {
-    return <div className="p-4 text-sm text-chrome-muted">加载中…</div>
+    return <div className="p-4 text-sm text-chrome-muted">{t('loading', locale)}</div>
   }
 
   const onSectionDragEnd = (e: DragEndEvent) => {
@@ -58,11 +58,11 @@ export function EditorPanel() {
   return (
     <div className="h-full overflow-y-auto p-3 bg-chrome-bg">
       {/* 简历档名 */}
-      <Field label="简历名称">
+      <Field label={t('resumeName', locale)}>
         <TextInput
           value={resume.name}
           onChange={(v) => update((d) => { d.name = v })}
-          placeholder="我的简历"
+          placeholder={t('myResume', locale)}
         />
       </Field>
 
@@ -104,7 +104,7 @@ export function EditorPanel() {
       </Block>
 
       {/* ─── Meta ─── */}
-      <Block title={locale === 'zh' ? '岗位 / 关键词' : 'Target / Keywords'}>
+      <Block title={t('targetKeywords', locale)}>
         <Field label={t('metaTargetRole', locale)}>
           <LocalizedInput value={resume.meta.targetRole ?? {}} onChange={(v) => setMeta({ targetRole: v })} />
         </Field>
@@ -148,12 +148,12 @@ export function EditorPanel() {
                     setShowAdd(false)
                   }}
                 >
-                  + {a.label}
+                  + {t(a.labelKey, locale)}
                 </button>
               ))}
             </div>
             <button type="button" className="mt-2 text-xs text-chrome-muted" onClick={() => setShowAdd(false)}>
-              收起
+              {t('collapse', locale)}
             </button>
           </div>
         )}
@@ -206,6 +206,7 @@ function LocalizedKeywords({
   items: { zh?: string; en?: string }[]
   onChange: (v: { zh?: string; en?: string }[]) => void
 }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       {items.map((it, i) => (
@@ -227,7 +228,7 @@ function LocalizedKeywords({
         className="text-xs text-chrome-ink hover:underline"
         onClick={() => onChange([...items, { zh: '', en: '' }])}
       >
-        + 关键词
+        + {t('keyword', locale)}
       </button>
     </div>
   )
