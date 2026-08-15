@@ -9,6 +9,8 @@ import { useResumeStore, type SaveStatus } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { listTemplates, unregisterTemplate } from '@/templates/registry'
 import { exportPDF, printResume, exportImage } from '@/export/pdf'
+import { resumeToMarkdown } from '@/export/markdown'
+import { resumeToJsonResume } from '@/export/jsonResume'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -16,7 +18,7 @@ import { TemplateStudioDialog } from '@/components/dialogs/TemplateStudioDialog'
 import { useTemplateStore } from '@/store/templateStore'
 import { slugify } from '@/utils/slug'
 import { t } from '@/i18n'
-import { Github, Sparkles, Sun, Moon } from 'lucide-react'
+import { Github, Sparkles, Sun, Moon, Undo2, Redo2 } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -37,6 +39,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const remove = useResumeStore((s) => s.remove)
   const duplicate = useResumeStore((s) => s.duplicate)
   const saveStatus = useResumeStore((s) => s.saveStatus)
+  const canUndo = useResumeStore((s) => s.past.length > 0)
+  const canRedo = useResumeStore((s) => s.future.length > 0)
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
@@ -97,6 +101,28 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
+  const doExportMarkdown = () => {
+    if (!current) return
+    setMenu(null)
+    const blob = new Blob([resumeToMarkdown(current, locale)], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slugify(current.name) || 'resume'}.md`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  const doExportJsonResume = () => {
+    if (!current) return
+    setMenu(null)
+    const blob = new Blob([JSON.stringify(resumeToJsonResume(current, locale), null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slugify(current.name) || 'resume'}.jsonresume.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
 
   return (
     <div ref={barRef} className="flex items-center gap-1 px-3 h-12 bg-chrome-panel border-b border-chrome-border text-chrome-ink">
@@ -129,6 +155,22 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
       {/* 保存状态指示 */}
       <SaveStatusBadge status={saveStatus} locale={locale} />
+      <button
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-chrome-bg text-chrome-muted disabled:opacity-30 disabled:hover:bg-transparent"
+        title={t('undo', locale)}
+        onClick={() => useResumeStore.getState().undo()}
+        disabled={!canUndo}
+      >
+        <Undo2 size={15} />
+      </button>
+      <button
+        className="w-7 h-7 flex items-center justify-center rounded hover:bg-chrome-bg text-chrome-muted disabled:opacity-30 disabled:hover:bg-transparent"
+        title={t('redo', locale)}
+        onClick={() => useResumeStore.getState().redo()}
+        disabled={!canRedo}
+      >
+        <Redo2 size={15} />
+      </button>
 
       {/* 简历列表 */}
       <div className="relative">
@@ -146,7 +188,10 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 active={r.id === current?.id}
                 onClick={() => { void select(r.id); setMenu(null) }}
                 onCopy={() => { void duplicate(r.id) }}
-                onRemove={() => { void remove(r.id) }}
+                onRemove={() => {
+                  if (!window.confirm(t('confirmDeleteResume', locale).replace('{name}', r.name))) return
+                  void remove(r.id)
+                }}
               >
                 {r.name}
               </DropdownItem>
@@ -258,6 +303,12 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJson}>
               {t('exportJson', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportMarkdown}>
+              {t('exportMarkdown', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJsonResume}>
+              {t('exportJsonResume', locale)}
             </button>
             <div className="border-t border-chrome-border my-1" />
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>
