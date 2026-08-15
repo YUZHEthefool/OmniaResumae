@@ -25,6 +25,8 @@ export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let pendingDraft: Resume | null = null
 let savePromise: Promise<void> = Promise.resolve()
+// 撤销检查点节流：距上次编辑 >1s 视为新编辑段，把"改前状态"压栈（避免每次按键都压栈）
+let lastEditMs = 0
 
 /* ─── 跨标签广播（尽力而为；无 BroadcastChannel 时降级为 no-op） ─── */
 let bc: BroadcastChannel | null = null
@@ -77,6 +79,9 @@ interface ResumeState {
   list: ListEntry[]
   loaded: boolean
   saveStatus: SaveStatus
+  // 撤销/重做历史（内存，不持久；切简历/增删/初始化时清空）
+  past: Resume[]
+  future: Resume[]
   // 生命周期
   init: () => Promise<void>
   refreshList: () => Promise<void>
@@ -93,6 +98,10 @@ interface ResumeState {
   moveSection: (sectionId: string, dir: -1 | 1) => void
   moveSectionTo: (from: number, to: number) => void
   moveItemTo: (sectionId: string, from: number, to: number) => void
+  // 撤销/重做 + 强制保存
+  undo: () => void
+  redo: () => void
+  saveNow: () => Promise<void>
 }
 
 export const useResumeStore = create<ResumeState>((set, get) => ({
@@ -100,6 +109,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
   list: [],
   loaded: false,
   saveStatus: 'idle',
+  past: [],
+  future: [],
 
   async init() {
     if (get().loaded) return
@@ -110,7 +121,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
         const m = ev.data
         if (!m || typeof m !== 'object') return
         if (m.type === 'saved' && get().current?.id === m.id && !pendingDraft) {
-          // 他标签改了同一简历：重载 current。本标签若有未落盘草稿则跳过，避免丢本标签编辑
+          // 他标签改了同一简历：重载 current。但本标签若有未落盘草稿则跳过，避免丢本标签编辑
           db.resumes.get(m.id as string).then((r) => { if (r) set({ current: r }) })
         } else if (m.type === 'list') {
           void get().refreshList()
@@ -159,7 +170,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     await flushSave()
     const r = createEmptyResume(name ?? `简历 ${get().list.length + 1}`)
     await putResume(r)
-    set({ current: r, list: [toEntry(r), ...get().list] })
+    lastEditMs = 0
+    set({ current: r, list: [toEntry(r), ...get().list], past: [], future: [] })
     notify({ type: 'list' })
     return r.id
   },
@@ -167,7 +179,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
   async select(id) {
     await flushSave()
     const r = await db.resumes.get(id)
-    if (r) set({ current: r })
+    if (r) { lastEditMs = 0; set({ current: r, past: [], future: [] }) }
   },
 
   async remove(id) {
@@ -187,14 +199,16 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
       if (list.length === 0) {
         const r = createEmptyResume('我的简历')
         await putResume(r)
-        set({ current: r, list: [toEntry(r)] })
+        lastEditMs = 0
+        set({ current: r, list: [toEntry(r)], past: [], future: [] })
         notify({ type: 'list' })
         return
       }
       const next = await db.resumes.get(list[0].id)
       current = next ?? null
     }
-    set({ current, list })
+    lastEditMs = 0
+    set({ current, list, past: [], future: [] })
     notify({ type: 'list' })
   },
 
@@ -222,7 +236,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     copy.createdAt = t
     copy.updatedAt = t
     await putResume(copy)
-    set({ current: copy, list: [toEntry(copy), ...get().list] })
+    lastEditMs = 0
+    set({ current: copy, list: [toEntry(copy), ...get().list], past: [], future: [] })
     notify({ type: 'list' })
     return copy.id
   },
@@ -230,6 +245,12 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
   update(fn) {
     const cur = get().current
     if (!cur) return
+    // 撤销检查点：距上次编辑 >1s 视为新编辑段，把改前状态压栈（限 50，清 future）
+    const now = Date.now()
+    if (now - lastEditMs > 1000) {
+      set((s) => ({ past: [...s.past, structuredClone(cur)].slice(-50), future: [] }))
+    }
+    lastEditMs = now
     const draft = structuredClone(cur) as Resume
     fn(draft)
     draft.updatedAt = nowStamp()
@@ -296,6 +317,44 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
       const [moved] = items.splice(from, 1)
       items.splice(to, 0, moved)
     })
+  },
+
+  undo() {
+    const { past, current } = get()
+    if (!past.length || !current) return
+    const prev = past[past.length - 1]
+    const restored = structuredClone(prev)
+    restored.updatedAt = nowStamp()
+    lastEditMs = 0 // 让紧接着的编辑把 restored 当作新检查点起点
+    set((s) => ({
+      past: s.past.slice(0, -1),
+      future: [current, ...s.future].slice(0, 50),
+      current: restored,
+      list: s.list.map((e) => (e.id === restored.id ? { id: restored.id, name: restored.name, updatedAt: restored.updatedAt } : e)),
+    }))
+    scheduleSave(restored)
+  },
+
+  redo() {
+    const { future, current } = get()
+    if (!future.length || !current) return
+    const next = future[0]
+    const restored = structuredClone(next)
+    restored.updatedAt = nowStamp()
+    lastEditMs = 0
+    set((s) => ({
+      future: s.future.slice(1),
+      past: [...s.past, current].slice(-50),
+      current: restored,
+      list: s.list.map((e) => (e.id === restored.id ? { id: restored.id, name: restored.name, updatedAt: restored.updatedAt } : e)),
+    }))
+    scheduleSave(restored)
+  },
+
+  async saveNow() {
+    set({ saveStatus: 'saving' })
+    await flushSave()
+    set({ saveStatus: 'saved' })
   },
 }))
 
