@@ -35,6 +35,28 @@ export default function App() {
     void init()
   }, [init])
 
+  // 全局快捷键：Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 或 Ctrl+Y 重做、Ctrl/Cmd+S 强制保存。
+  // 焦点在 input/textarea/contentEditable 时放行原生撤销（除非 Shift+Z 重做）。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+      const k = e.key.toLowerCase()
+      if (k === 's') { e.preventDefault(); void useResumeStore.getState().saveNow() }
+      else if (k === 'z' || k === 'y') {
+        const target = e.target as HTMLElement | null
+        const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        if (typing && k === 'z' && !e.shiftKey) return
+        e.preventDefault()
+        const isRedo = k === 'y' || (k === 'z' && e.shiftKey)
+        if (isRedo) useResumeStore.getState().redo()
+        else useResumeStore.getState().undo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!loaded) {
     return (
       <div className="h-full flex items-center justify-center text-chrome-muted text-sm">
