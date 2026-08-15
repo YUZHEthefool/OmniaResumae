@@ -19,7 +19,7 @@ export default defineConfig({
       output: {
         // 把编辑器运行时与重依赖拆分；重依赖已通过动态 import 按需加载
         manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
+          react: ['react', 'react-dom'],
           state: ['zustand', 'dexie', 'zod', 'clsx'],
         },
       },
