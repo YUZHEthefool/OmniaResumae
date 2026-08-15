@@ -52,6 +52,7 @@ export function TemplateStudioDialog({ onClose }: { onClose: () => void }) {
     const reader = new FileReader()
     reader.onload = () => setImageDataUrl(reader.result as string)
     reader.readAsDataURL(f)
+    e.target.value = '' // 重置，否则移除后再选同一张图不触发 change
   }
 
   const runGenerate = async () => {
