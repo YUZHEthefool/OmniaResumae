@@ -5,7 +5,7 @@
  */
 import { useState } from 'react'
 import { clsx } from 'clsx'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
@@ -47,7 +47,10 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
   const [open, setOpen] = useState(true)
 
   const Editor = EDITORS[section.type]
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  )
 
   const setSection = (fn: (d: Section) => void) =>
     update((d) => {

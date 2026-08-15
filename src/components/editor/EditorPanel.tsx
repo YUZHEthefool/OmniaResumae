@@ -3,7 +3,7 @@
  * 顶部 Basics + Meta，下面按 section 列出 SectionEditor，末尾"添加段落"。
  */
 import { useState } from 'react'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Resume, SectionType, Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
@@ -32,7 +32,11 @@ export function EditorPanel() {
   const moveSectionTo = useResumeStore((s) => s.moveSectionTo)
   const locale = useUIStore((s) => s.locale)
   const [showAdd, setShowAdd] = useState(false)
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  // KeyboardSensor 让 ⠿ 句柄可键盘操作（Enter/Space 起，方向键移，Enter 落，Esc 取），补 a11y
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  )
 
   if (!resume) {
     return <div className="p-4 text-sm text-chrome-muted">加载中…</div>
