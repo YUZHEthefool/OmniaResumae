@@ -9,6 +9,7 @@ import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, SectionType } from '@/types/resume'
 import { uid, nowStamp } from '@/schema/defaults'
 import { validateAIResume } from '@/schema/validate'
+import { coerceLoc, coerceItem } from '@/schema/coerce'
 
 export const SCHEMA_HINT = `{
   "basics": {
@@ -101,18 +102,18 @@ export function normalizeToResume(data: unknown, locale: Locale): Resume {
     templateId: 'brutalist',
     meta: { keywords: [] },
     basics: {
-      name: asLoc(b.name) ?? { zh: '', en: '' },
+      name: coerceLoc(b.name, locale) ?? { zh: '', en: '' },
       nameRomanized: asStr(b.nameRomanized),
-      label: asLoc(b.label),
+      label: coerceLoc(b.label, locale),
       image: asStr(b.image),
       email: asStr(b.email),
       phone: asStr(b.phone),
       url: asStr(b.url),
-      location: asLoc(b.location),
-      summary: asLoc(b.summary),
+      location: coerceLoc(b.location, locale),
+      summary: coerceLoc(b.summary, locale),
     },
     sections: Array.isArray(d.sections)
-      ? (d.sections as Array<Record<string, unknown>>).map((s) => normalizeSection(s))
+      ? (d.sections as Array<Record<string, unknown>>).map((s) => normalizeSection(s, locale))
       : [],
     locale,
     createdAt: t,
@@ -120,22 +121,19 @@ export function normalizeToResume(data: unknown, locale: Locale): Resume {
   }
 }
 
-function normalizeSection(s: Record<string, unknown>): Resume['sections'][number] {
+function normalizeSection(s: Record<string, unknown>, locale: Locale): Resume['sections'][number] {
   return {
     id: uid('sec'),
     type: ((s.type as string) || 'custom') as SectionType,
-    title: asLoc(s.title) ?? { zh: '', en: '' },
+    title: coerceLoc(s.title, locale) ?? { zh: '', en: '' },
     layout: (s.layout as 'main' | 'sidebar') === 'sidebar' ? 'sidebar' : 'main',
-    items: Array.isArray(s.items) ? (s.items as never[]).map((it) => ({ id: uid('item'), ...(it as object) })) : [],
+    items: Array.isArray(s.items)
+      ? (s.items as Array<Record<string, unknown>>).map((it) => ({ id: uid('item'), ...coerceItem((s.type as string) || 'custom', it, locale) }))
+      : [],
     visible: true,
   }
 }
 
 function asStr(v: unknown): string | undefined {
   return typeof v === 'string' && v ? v : undefined
-}
-function asLoc(v: unknown): { zh?: string; en?: string } | undefined {
-  if (!v || typeof v !== 'object') return undefined
-  const o = v as { zh?: string; en?: string }
-  return { zh: o.zh || undefined, en: o.en || undefined }
 }

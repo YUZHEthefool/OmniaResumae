@@ -8,43 +8,9 @@
 import type { ToolDef } from './agent'
 import { useResumeStore } from '@/store/resumeStore'
 import { uid, SECTION_TITLE_PRESETS } from '@/schema/defaults'
+import { isLocalized, mergeLoc, coerceHighlights, coerceItem, LOC_BASICS_KEYS, LOC_ITEM_KEYS } from '@/schema/coerce'
 import type { Locale, Localized, Resume, SectionType } from '@/types/resume'
 import type { Skill } from '@/skills/types'
-
-/* ─── 辅助 ─── */
-function isLocalized(v: unknown): v is Localized {
-  return !!v && typeof v === 'object' && ('zh' in v || 'en' in v)
-}
-/** 逐语种合并 Localized（保留已有语言，补入新语言） */
-function mergeLoc(base: Localized | undefined, patch: Localized | undefined): Localized | undefined {
-  if (!patch) return base
-  return { zh: patch.zh ?? base?.zh, en: patch.en ?? base?.en }
-}
-
-/** basics 中属于 Localized 的字段名（按定义判断，而非按当前值——避免空字段被当非 Localized 写入裸字符串导致 pick 失效） */
-const LOC_BASICS_KEYS = new Set(['name', 'label', 'summary', 'location'])
-/** 条目中属于 Localized 的标量字段名（跨各 section type 的并集） */
-const LOC_ITEM_KEYS = new Set([
-  'name', 'position', 'institution', 'area', 'studyType', 'description',
-  'title', 'tag', 'body', 'label', 'text', 'sub', 'level', 'awarder', 'publisher', 'summary', 'location',
-])
-
-/** 把模型可能传错的 highlights（字符串数组 / 对象数组）规范化为 Localized[]；按索引保留旧值另一语言 */
-function coerceHighlights(
-  v: unknown,
-  locale: Locale,
-  prev: Localized[] = [],
-): Localized[] {
-  if (!Array.isArray(v)) return []
-  return v.map((h, i) => {
-    if (h && typeof h === 'object' && ('zh' in h || 'en' in h)) {
-      const o = h as Localized
-      return { zh: o.zh, en: o.en }
-    }
-    if (typeof h === 'string') return { ...(prev[i] ?? {}), [locale]: h } as Localized
-    return prev[i] ?? { zh: undefined, en: undefined }
-  })
-}
 
 /** 镜像 createItem：按 type 给带 uid + 必填骨架的条目 */
 function baseItem(type: string): Record<string, unknown> {
@@ -204,14 +170,16 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
         additionalProperties: false,
       },
       run: (args) => {
-        const { type, layout, title } = args as { type: SectionType; layout?: 'main' | 'sidebar'; title?: Localized }
+        const { type, layout, title } = args as { type: SectionType; layout?: 'main' | 'sidebar'; title?: Localized | string }
         const preset = SECTION_TITLE_PRESETS[type] ?? { zh: '自定义', en: 'Custom' }
+        // 模型常把 title 传成裸字符串——强制为 {[locale]:title}，否则 title.zh 为 undefined 会静默回退到 preset
+        const titleLoc = title ? (typeof title === 'string' ? { [locale]: title } as Localized : title) : undefined
         let newId = ''
         useResumeStore.getState().update((d) => {
           const sec = {
             id: uid('sec'),
             type,
-            title: title ? { zh: title.zh ?? preset.zh, en: title.en ?? preset.en } : { ...preset },
+            title: titleLoc ? { zh: titleLoc.zh ?? preset.zh, en: titleLoc.en ?? preset.en } : { ...preset },
             layout: layout ?? defaultLayout(type),
             items: [],
             visible: true,
@@ -281,12 +249,11 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
           const s = d.sections.find((x) => x.id === section_id)
           if (!s) return
           const base = baseItem(s.type)
-          const merged = { ...base, ...item } as Record<string, unknown>
-          merged.id = base.id // 忽略 agent 传的 id
-          // Localized 字段逐语种合并
-          for (const [k, v] of Object.entries(item)) {
-            if (isLocalized(base[k]) && isLocalized(v)) merged[k] = mergeLoc(base[k] as Localized, v as Localized)
-          }
+          // 强制 item 字段为安全形态（字符串→Localized、highlights→数组、剥 stray id），
+          // 再覆盖到 base 骨架上。旧实现仅 isLocalized(base[k])&&isLocalized(v) 合并——base 字段
+          // 初始化为 {} 使 isLocalized 恒 false，合并分支是死代码；模型传裸字符串会原样写入致 pick 失效。
+          const merged = { ...base, ...coerceItem(s.type, item, locale) } as Record<string, unknown>
+          merged.id = base.id
           s.items.push(merged as never)
           newId = base.id as string
         })
