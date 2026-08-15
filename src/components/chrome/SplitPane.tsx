@@ -41,6 +41,7 @@ export function SplitPane({
           if (dragging.current) onMove(e.clientX)
         }}
         onPointerUp={() => { dragging.current = false }}
+        onPointerCancel={() => { dragging.current = false }}
         onDoubleClick={() => setRatio(0.42)}
       />
       <div style={{ width: `${(1 - ratio) * 100}%` }} className="h-full overflow-hidden min-w-[280px]">
