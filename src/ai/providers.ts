@@ -23,8 +23,10 @@ export interface ChatOptions {
   messages: ChatMessage[]
   /** 强制 JSON 输出 */
   json?: boolean
-  /** 最多重试一次（解析失败时） */
+  /** 采样温度 */
   temperature?: number
+  /** 输出 token 上限（仅 Anthropic 用，默认 8192）；长输出（完整简历 JSON、模板 CSS）应调高，否则被截断致 JSON 不完整 */
+  maxTokens?: number
   /** 中断信号：透传到 fetch，支持 Stop 中断在途请求 */
   signal?: AbortSignal
 }
@@ -129,7 +131,8 @@ async function chatWithToolsAnthropic(
   const { system, msgs } = toAnthropicMessages(messages)
   const body: Record<string, unknown> = {
     model: config.model,
-    max_tokens: 4096,
+    // emit_resume 等工具参数可能很大（完整简历 JSON），4096 会截断 tool_use input
+    max_tokens: 8192,
     temperature,
     system,
     messages: msgs,
@@ -287,7 +290,8 @@ async function chatAnthropic(config: AIProviderConfig, opts: ChatOptions): Promi
 
   const body: Record<string, unknown> = {
     model: config.model,
-    max_tokens: 4096,
+    // 完整简历 JSON / 模板 CSS 可能较长，4096 会截断致 JSON 不完整；调用方可经 maxTokens 再调高
+    max_tokens: opts.maxTokens ?? 8192,
     temperature: opts.temperature ?? 0.4,
     system,
     messages,
