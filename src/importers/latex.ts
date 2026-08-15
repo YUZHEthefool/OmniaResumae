@@ -18,8 +18,10 @@ export function parseLatexToFragment(tex: string): ImportFragment {
 
   const frag: ImportFragment = { sections: [] }
 
-  // 姓名：\name{...} 或 \author{...}
-  const name = src.match(/\\name\{([^}]*)\}/i)?.[1]
+  // 姓名：moderncv \name{first}{last}（两参），回退到单参 \name{...} / \author{...} / \title{...}
+  const nameTwo = src.match(/\\name\{([^}]*)\}\s*\{([^}]*)\}/i)
+  const name = (nameTwo ? `${nameTwo[1]} ${nameTwo[2]}`.trim() : null)
+    || src.match(/\\name\{([^}]*)\}/i)?.[1]
     || src.match(/\\author\{([^}]*)\}/i)?.[1]
     || src.match(/\\title\{([^}]*)\}/i)?.[1]
   if (name) frag.basics = { name: localize(clean(name), langHint) }
@@ -27,7 +29,7 @@ export function parseLatexToFragment(tex: string): ImportFragment {
   // email / phone / url
   const email = src.match(/\\email\{([^}]*)\}/i)?.[1] || src.match(/\\homepage\{([^}]*)\}/i)?.[1]
   // phone/mobile：要求 {...} 或 空格+单 token，避免无括号时 ([^}]*) 贪婪吞掉后续文档
-  const phoneM = src.match(/\\(?:phone|mobile)\s*\{([^}]*)\}/i) || src.match(/\\(?:phone|mobile)\s+([^\s\\]+)/i)
+  const phoneM = src.match(/\\(?:phone|mobile|fixedphone)\s*\{([^}]*)\}/i) || src.match(/\\(?:phone|mobile|fixedphone)\s+([^\s\\]+)/i)
   const phone = phoneM?.[1]
   const url = src.match(/\\homepage\{([^}]*)\}/i)?.[1] || src.match(/\\href\{(https?:[^}]*)\}/i)?.[1]
   if (email && /@/.test(email)) frag.basics = { ...frag.basics, email: clean(email) }
@@ -52,7 +54,10 @@ export function parseLatexToFragment(tex: string): ImportFragment {
 
     // moderncv \cventry{date}{degree/position}{institution/company}{location}{grade}{desc}
     // desc 含嵌套命令的 } 时，旧正则在第一个 } 处截断；改为只在 } 后跟下一个条目/段命令或文末才收尾
-    const cvRe = /\\cventry\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([\s\S]*?)\}(?=\s*\\(?:cventry|cvitem|cvlistitem|cvdoubleitem|section|subsection|cvsection|begin|end|item)|\s*$)/g
+    // moderncv \cventry{date}{degree/position}{institution/company}{location}{grade}{desc}
+    // desc 常含 \begin{itemize}\item...\end{itemize}：lookahead 只认同级条目/段命令（不含 begin/end/item），
+    // 否则 lazy 的 ([\s\S]*?)\} 会在 \begin{itemize} 的 } 处提前收尾，整段 bullet 丢失。
+    const cvRe = /\\cventry\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([\s\S]*?)\}(?=\s*\\(?:cventry|cvitem|cvlistitem|cvdoubleitem|section|subsection|cvsection)|\s*$)/g
     let c: RegExpExecArray | null
     let foundEntries = false
     while ((c = cvRe.exec(body))) {
@@ -94,6 +99,29 @@ export function parseLatexToFragment(tex: string): ImportFragment {
       })
     }
 
+    // moderncv \cvitem{key}{value}（技能/语言等键值对）
+    const cviRe = /\\cvitem\{([^}]*)\}\{([^}]*)\}/g
+    let cvi: RegExpExecArray | null
+    while ((cvi = cviRe.exec(body))) {
+      foundEntries = true
+      sec.items.push({ id: uid('tex_item'), name: localize(clean(cvi[1]), langHint), level: localize(clean(cvi[2]), langHint) })
+    }
+    // \cvlistitem{value}（单项列表）
+    const cvlRe = /\\cvlistitem\{([^}]*)\}/g
+    let cvl: RegExpExecArray | null
+    while ((cvl = cvlRe.exec(body))) {
+      foundEntries = true
+      sec.items.push({ id: uid('tex_item'), name: localize(clean(cvl[1]), langHint), level: localize('', langHint) })
+    }
+    // \cvdoubleitem{a}{b}{c}{d}（两对键值）
+    const cvdRe = /\\cvdoubleitem\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g
+    let cvd: RegExpExecArray | null
+    while ((cvd = cvdRe.exec(body))) {
+      foundEntries = true
+      sec.items.push({ id: uid('tex_item'), name: localize(clean(cvd[1]), langHint), level: localize(clean(cvd[2]), langHint) })
+      sec.items.push({ id: uid('tex_item'), name: localize(clean(cvd[3]), langHint), level: localize(clean(cvd[4]), langHint) })
+    }
+
     // 通用 \item 列表（skills / highlights / awards）
     if (!foundEntries) {
       const items = [...body.matchAll(/\\item\s+([^\n\\]*(?:\n(?!\s*\\)[^\n\\]*)*)/g)].map((x) => clean(x[1]))
@@ -123,6 +151,8 @@ export function parseLatexToFragment(tex: string): ImportFragment {
 /* ─── helpers ─── */
 function clean(s: string): string {
   return s
+    .replace(/\\([%&_$#])/g, '$1') // 转义特殊字符 \& \% \_ 等（旧正则要求 \ 后跟字母，这些会残留反斜杠）
+    .replace(/\\(?:begin|end)\{[^}]*\}/g, '') // 剥环境标记 \begin{itemize} / \end{itemize}（cventry desc 常含）
     .replace(/\\(textbf|textit|emph|texttt|textsc)\{([^{}]*)\}/g, '$2')
     .replace(/\\href\{[^}]*\}\{([^{}]*)\}/g, '$1')
     .replace(/\\[a-zA-Z]+\{?([^{}]*)\}?/g, '$1')
