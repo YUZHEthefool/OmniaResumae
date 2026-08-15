@@ -26,7 +26,8 @@ export function sanitizeCSS(raw: string): string {
   s = s.replace(/javascript:/gi, '/* javascript: */')
   s = s.replace(/vbscript:/gi, '/* vbscript: */')
   s = s.replace(/-moz-binding\s*:/gi, '/* -moz-binding: */')
-  s = s.replace(/behavior\s*:/gi, '/* behavior: */')
+  // 仅匹配作为属性名的 behavior:（前面不是字母/连字符），避免误伤 scroll-behavior / transition-behavior
+  s = s.replace(/(?<![a-z-])behavior\s*:/gi, '/* behavior: */')
   return s
 }
 
