@@ -9,7 +9,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Section, Locale } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
-import { SECTION_TITLE_PRESETS } from '@/schema/defaults'
+import { SECTION_TITLE_PRESETS, uid } from '@/schema/defaults'
 import { LocalizedInput, Field } from './fields'
 import { t } from '@/i18n'
 import {
@@ -71,6 +71,15 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
   const removeItem = (itemId: string) =>
     setSection((s) => {
       s.items = s.items.filter((it) => it.id !== itemId) as never[]
+    })
+
+  const duplicateItem = (itemId: string) =>
+    setSection((s) => {
+      const i = s.items.findIndex((it) => it.id === itemId)
+      if (i < 0) return
+      const copy = structuredClone(s.items[i]) as { id: string }
+      copy.id = uid(s.type)
+      s.items.splice(i + 1, 0, copy as never)
     })
 
   const moveItem = (itemId: string, dir: -1 | 1) =>
@@ -165,9 +174,10 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
                               #{i + 1} {itemTitle(it, locale, SECTION_TITLE_PRESETS[section.type]?.[locale] || section.type)}
                             </span>
                             <div className="flex gap-1 text-chrome-muted text-xs">
-                              <button type="button" onClick={() => moveItem(it.id, -1)}>▲</button>
-                              <button type="button" onClick={() => moveItem(it.id, 1)}>▼</button>
-                              <button type="button" className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
+                              <button type="button" title={t('moveUp', locale)} onClick={() => moveItem(it.id, -1)}>▲</button>
+                              <button type="button" title={t('moveDown', locale)} onClick={() => moveItem(it.id, 1)}>▼</button>
+                              <button type="button" title={t('duplicateItem', locale)} onClick={() => duplicateItem(it.id)}>⧉</button>
+                              <button type="button" title={t('deleteItem', locale)} className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
                             </div>
                           </div>
                           <Editor item={it as never} update={(p: never) => setItem(it.id, p as never)} />
