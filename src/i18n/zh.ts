@@ -23,6 +23,12 @@ export const zh = {
   saved: '已保存',
   saveFailed: '保存失败',
   dragHandle: '拖拽排序',
+  undo: '撤销',
+  redo: '重做',
+  duplicateItem: '复制条目',
+  confirmDeleteResume: '确定删除简历「{name}」？此操作不可撤销。',
+  exportMarkdown: '导出 Markdown',
+  exportJsonResume: '导出 JSON Resume',
 
   // 编辑面板
   basics: '基本信息',
@@ -65,9 +71,6 @@ export const zh = {
   // 预览
   preview: '预览',
   emptyHint: '左侧填写信息，此处实时渲染',
-
-  // 占位（导入/GitHub/AI 后续 Phase 实现）
-  comingSoon: '该功能将在后续阶段实现',
 
   // AI Copilot 右侧面板（对话式 agent）
   copilot: 'AI 助手',

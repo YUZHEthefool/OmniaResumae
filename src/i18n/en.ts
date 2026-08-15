@@ -24,6 +24,12 @@ export const en: Dict = {
   saved: 'Saved',
   saveFailed: 'Save failed',
   dragHandle: 'Drag to reorder',
+  undo: 'Undo',
+  redo: 'Redo',
+  duplicateItem: 'Duplicate item',
+  confirmDeleteResume: 'Delete resume "{name}"? This cannot be undone.',
+  exportMarkdown: 'Export Markdown',
+  exportJsonResume: 'Export JSON Resume',
 
   basics: 'Basics',
   basicsName: 'Name',
@@ -63,8 +69,6 @@ export const en: Dict = {
 
   preview: 'Preview',
   emptyHint: 'Fill the form on the left; preview updates live',
-
-  comingSoon: 'This feature arrives in a later phase',
 
   // AI Copilot right panel (conversational agent)
   copilot: 'AI Assistant',
