@@ -9,7 +9,7 @@ import type {
 } from '@/types/resume'
 
 let _seq = 0
-/** 稳定且足够唯一的 id（无 Date.now/random 以保持可复现测试） */
+/** 足够唯一的 id：序号 + random 后缀（跨会话也可用，不依赖 Date.now 单调） */
 export function uid(prefix = 'id'): string {
   _seq += 1
   return `${prefix}_${_seq.toString(36)}_${Math.random().toString(36).slice(2, 8)}`
