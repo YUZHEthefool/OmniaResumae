@@ -109,8 +109,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
       bc.onmessage = (ev) => {
         const m = ev.data
         if (!m || typeof m !== 'object') return
-        if (m.type === 'saved' && get().current?.id === m.id) {
-          // 他标签改了同一简历：重载 current
+        if (m.type === 'saved' && get().current?.id === m.id && !pendingDraft) {
+          // 他标签改了同一简历：重载 current。本标签若有未落盘草稿则跳过，避免丢本标签编辑
           db.resumes.get(m.id as string).then((r) => { if (r) set({ current: r }) })
         } else if (m.type === 'list') {
           void get().refreshList()
@@ -348,6 +348,12 @@ function sanitizeResume(r: Resume): Resume {
       if (Array.isArray(s.items)) {
         for (const it of s.items as Array<Record<string, unknown>>) {
           if (!it) continue
+          // 兜底：work/projects/education 条目的 highlights 必须是数组，旧数据/AI 产出可能缺失，
+          // 缺失则下游模板 item.highlights.filter / 编辑器 LocalizedList 崩溃。
+          if ((s.type === 'work' || s.type === 'projects' || s.type === 'education') && !Array.isArray(it.highlights)) {
+            it.highlights = []
+            changed = true
+          }
           for (const k of Object.keys(it)) {
             const v = it[k]
             if (v && typeof v === 'object' && ('zh' in v || 'en' in v)) {
