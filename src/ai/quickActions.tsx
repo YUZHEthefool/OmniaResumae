@@ -66,7 +66,7 @@ export function OptimizeAction() {
 
   return (
     <div className="space-y-2.5">
-      <select className="w-full text-xs p-1.5 border border-copilot-border rounded bg-copilot-surface text-copilot-ink focus:outline-none focus:border-copilot-accent" value={target} onChange={(e) => setTarget(e.target.value)}>
+      <select className="w-full text-xs p-1.5 border border-copilot-border rounded bg-copilot-surface text-copilot-ink focus:outline-none focus:border-copilot-accent" value={target} onChange={(e) => setTarget(e.target.value)} disabled={!!prop}>
         <option value="">— 选择条目 —</option>
         {candidates.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
       </select>
@@ -223,17 +223,24 @@ export function TranslateAction() {
   if (resume.basics.label) add('头衔', resume.basics.label, (d, v) => { d.basics.label = { ...d.basics.label!, [to]: v } })
   if (resume.basics.summary) add('核心优势', resume.basics.summary, (d, v) => { d.basics.summary = { ...d.basics.summary!, [to]: v } })
   if (resume.basics.location) add('所在地', resume.basics.location, (d, v) => { d.basics.location = { ...d.basics.location!, [to]: v } })
-  resume.sections.forEach((sec, si) => {
-    add(`标题·${pick(sec.title, locale)}`, sec.title, (d, v) => { d.sections[si].title = { ...d.sections[si].title, [to]: v } })
-    sec.items.forEach((item, ii) => {
+  resume.sections.forEach((sec) => {
+    const secId = sec.id
+    add(`标题·${pick(sec.title, locale)}`, sec.title, (d, v) => {
+      const s = d.sections.find((x) => x.id === secId)
+      if (s) s.title = { ...s.title, [to]: v }
+    })
+    sec.items.forEach((item) => {
+      const itemId = item.id
       const it = item as Record<string, unknown>
       const KEYS = ['name', 'position', 'institution', 'area', 'studyType', 'level', 'description', 'awarder', 'title', 'tag', 'body', 'label', 'text', 'sub']
       KEYS.forEach((k) => {
         const v = it[k]
         if (v && typeof v === 'object' && ('zh' in v || 'en' in v)) {
           add(`${pick(sec.title, locale)}.${k}`, v as { zh?: string; en?: string }, (d, val) => {
-            const obj = (d.sections[si].items[ii] as Record<string, unknown>)[k] as { zh?: string; en?: string }
-            ;(d.sections[si].items[ii] as Record<string, unknown>)[k] = { ...obj, [to]: val }
+            // 按 id 解析（不存 si/ii 位置索引）：编辑器同时增删段/条目时索引会失效写错位或抛错
+            const s = d.sections.find((x) => x.id === secId)
+            const target = s?.items.find((x) => x.id === itemId) as Record<string, unknown> | undefined
+            if (target) target[k] = { ...((target[k] as { zh?: string; en?: string }) ?? {}), [to]: val }
           })
         }
       })
@@ -241,8 +248,9 @@ export function TranslateAction() {
       if (Array.isArray(hl)) {
         hl.forEach((h, hi) => {
           add(`${pick(sec.title, locale)}.亮点[${hi}]`, h, (d, val) => {
-            const arr = (d.sections[si].items[ii] as { highlights?: { zh?: string; en?: string }[] }).highlights!
-            arr[hi] = { ...arr[hi], [to]: val }
+            const s = d.sections.find((x) => x.id === secId)
+            const target = s?.items.find((x) => x.id === itemId) as { highlights?: { zh?: string; en?: string }[] } | undefined
+            if (target?.highlights && target.highlights[hi]) target.highlights[hi] = { ...target.highlights[hi], [to]: val }
           })
         })
       }
