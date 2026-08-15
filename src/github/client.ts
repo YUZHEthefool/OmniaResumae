@@ -41,7 +41,8 @@ async function pagedFrom<T>(firstRes: Response, pat: string, maxPages = 10): Pro
   let next = parseNextLink(firstRes.headers.get('Link'))
   for (let i = 0; i < maxPages - 1 && next; i++) {
     const res = await fetch(next, { headers: headers(pat) })
-    if (!res.ok) break
+    // 中途失败（如限流）抛错让调用方提示，而非静默返回截断的部分结果
+    if (!res.ok) throw new Error(`GitHub 分页失败 ${res.status}（可能限流），结果可能不完整`)
     out = out.concat((await res.json()) as T[])
     next = parseNextLink(res.headers.get('Link'))
   }

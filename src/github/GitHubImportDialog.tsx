@@ -89,10 +89,13 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
       }
       merge((d) => {
         const sec = d.sections.find((s) => s.type === 'projects')
-        if (sec) sec.items.push(...(items as never[]))
-        else d.sections.push({
+        // 按 repoUrl 去重，避免重复导入同一仓库产生重复条目
+        const existing = new Set((sec?.items as { repoUrl?: string }[] | undefined)?.map((it) => it.repoUrl).filter(Boolean) ?? [])
+        const fresh = items.filter((it) => !it.repoUrl || !existing.has(it.repoUrl))
+        if (sec) sec.items.push(...(fresh as never[]))
+        else if (fresh.length) d.sections.push({
           id: uid('sec'), type: 'projects', title: { zh: '开发项目', en: 'Projects' },
-          layout: 'main', items: items as never[], visible: true,
+          layout: 'main', items: fresh as never[], visible: true,
         })
       })
       onClose()
