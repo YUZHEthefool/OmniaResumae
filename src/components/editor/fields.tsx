@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
 import type { Localized, Locale } from '@/types/resume'
 import { useUIStore } from '@/store/uiStore'
+import { t } from '@/i18n'
 
 /* ─── 通用小部件 ─── */
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -133,6 +134,7 @@ export function TagsInput({
   onChange: (v: string[]) => void
   placeholder?: string
 }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div>
       <div className="flex flex-wrap gap-1 mb-1">
@@ -154,7 +156,7 @@ export function TagsInput({
       </div>
       <input
         className={inputCls}
-        placeholder={placeholder ?? '回车或逗号追加'}
+        placeholder={placeholder ?? t('tagsPlaceholder', locale)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault()
@@ -182,18 +184,19 @@ export function ImageUpload({
   value: string | undefined
   onChange: (v: string | undefined) => void
 }) {
+  const locale = useUIStore((s) => s.locale) as Locale
   return (
     <div className="flex items-center gap-3">
       {value ? (
         <img src={value} alt="avatar" className="w-12 h-12 rounded-full object-cover border border-chrome-border" />
       ) : (
         <div className="w-12 h-12 rounded-full bg-chrome-bg border border-chrome-border flex items-center justify-center text-chrome-muted text-xs">
-          无
+          {t('noAvatar', locale)}
         </div>
       )}
       <div className="flex gap-2">
         <label className="px-2 py-1 text-xs bg-chrome-ink text-white rounded cursor-pointer hover:bg-black">
-          上传
+          {t('upload', locale)}
           <input
             type="file"
             accept="image/*"
@@ -214,7 +217,7 @@ export function ImageUpload({
             className="px-2 py-1 text-xs border border-chrome-border rounded hover:bg-chrome-bg"
             onClick={() => onChange(undefined)}
           >
-            移除
+            {t('remove', locale)}
           </button>
         )}
       </div>
