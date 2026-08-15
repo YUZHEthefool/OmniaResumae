@@ -16,6 +16,12 @@ export function parseResumeJSON(text: string, locale: Locale = 'zh'): Resume {
   }
   const strict = ResumeSchema.safeParse(data)
   if (strict.success) return validateAIResume(strict.data)
-  // 松散兜底：归一化（补 id/时间戳/字段骨架）
+  // 松散兜底：仅当像一份简历（非数组对象且含 basics 或 sections）才归一化；
+  // 否则拒绝，避免任意 JSON（数组/标量/{foo:bar}）变成空白简历，replace 模式下静默擦除用户 basics
+  const obj = data as object
+  if (!data || typeof data !== 'object' || Array.isArray(data) ||
+      (!('basics' in obj) && !('sections' in obj))) {
+    throw new Error('不是合法的简历 JSON（缺少 basics/sections）')
+  }
   return validateAIResume(normalizeToResume(data, locale))
 }

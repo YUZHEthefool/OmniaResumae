@@ -4,7 +4,7 @@
  * 流程：选来源 → 读文件/粘贴 → 解析 → 预览提取条目 → 合并入当前简历（绝不静默覆盖）
  * LaTeX/PDF/MD 都可再走 "AI 结构化复核" 得到更可靠的结构。
  */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { clsx } from 'clsx'
 import type { Resume } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
@@ -40,12 +40,14 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
         return
       }
       if (source === 'markdown') {
-        setRaw(await f.text())
-        setFrag(parseMarkdownToFragment(await f.text()))
+        const txt = await f.text()
+        setRaw(txt)
+        setFrag(parseMarkdownToFragment(txt))
         setAIResume(null)
       } else if (source === 'latex') {
-        setRaw(await f.text())
-        setFrag(parseLatexToFragment(await f.text()))
+        const txt = await f.text()
+        setRaw(txt)
+        setFrag(parseLatexToFragment(txt))
         setAIResume(null)
       } else if (source === 'json') {
         // JSON：本工具导出格式的完整 Resume，直接结构化（走 aiResume 合并路径）
@@ -132,32 +134,37 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       if (aiResume) {
         // AI/JSON 结构化：整份覆盖或追加
         if (mode === 'replace') {
-          // 保留 AI/JSON 产物无法承载的字段：basics.profiles，以及未被覆盖的现有段
-          // （matches/domains/workflow/community 等扩展段 AI 罕见产出）。incoming 有则用 incoming。
-          d.basics = { ...aiResume.basics, profiles: aiResume.basics.profiles ?? d.basics.profiles }
-          const aiTypes = new Set(aiResume.sections.map((s) => s.type))
-          d.sections = [...aiResume.sections, ...d.sections.filter((s) => !aiTypes.has(s.type))]
+          // 保留 AI/JSON 产物无法承载的字段：profiles / image / nameRomanized，
+          // 以及未被覆盖的现有段（matches/domains/workflow/community 等扩展段 AI 罕见产出）
+          d.basics = {
+            ...aiResume.basics,
+            profiles: aiResume.basics.profiles ?? d.basics.profiles,
+            image: aiResume.basics.image ?? d.basics.image,
+            nameRomanized: aiResume.basics.nameRomanized ?? d.basics.nameRomanized,
+          }
+          // custom 段按 title 匹配/清理（多个 custom 段 title 不同，按 type 一锅端会误删/错位）
+          const aiKeys = new Set(aiResume.sections.map(sectionKey))
+          d.sections = [...aiResume.sections, ...d.sections.filter((s) => !aiKeys.has(sectionKey(s)))]
         } else {
           // append：追加 sections，basics 字段缺失才补
           d.basics = { ...aiResume.basics, ...d.basics }
-          // 同 type 的 section 追加 items，否则新增 section
           for (const s of aiResume.sections) {
-            const exist = d.sections.find((x) => x.type === s.type)
+            const exist = d.sections.find((x) => sectionKey(x) === sectionKey(s))
             if (exist) exist.items.push(...(s.items as never[]))
             else d.sections.push(s)
           }
         }
       } else if (frag) {
-        // 启发式片段：replace 时清空被覆盖的同 type 段再写入，避免残留旧条目
+        // 启发式片段：replace 时清空被覆盖的同 key 段再写入，避免残留旧条目
         if (mode === 'replace') {
           if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
-          const fragTypes = new Set(frag.sections.map((s) => s.type))
-          d.sections = d.sections.filter((s) => !fragTypes.has(s.type))
+          const fragKeys = new Set(frag.sections.map(sectionKey))
+          d.sections = d.sections.filter((s) => !fragKeys.has(sectionKey(s)))
           for (const s of frag.sections) d.sections.push(s as never)
         } else {
           if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
           for (const s of frag.sections) {
-            const exist = d.sections.find((x) => x.type === s.type)
+            const exist = d.sections.find((x) => sectionKey(x) === sectionKey(s))
             if (exist) exist.items.push(...(s.items as never[]))
             else d.sections.push(s as never)
           }
@@ -302,6 +309,12 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
+/** 段匹配键：custom 段按 title（zh|en 小写）区分——多个 custom 段 title 不同，按 type 一锅端会误删/错位 */
+function sectionKey(s: { type: string; title: { zh?: string; en?: string } }): string {
+  if (s.type !== 'custom') return s.type
+  return `custom::${(s.title.zh ?? '').trim().toLowerCase()}|${(s.title.en ?? '').trim().toLowerCase()}`
+}
+
 function Overlay({
   children, onClose, closeOnOverlay = true,
 }: {
@@ -310,12 +323,20 @@ function Overlay({
   /** 点遮罩透明区域是否关闭；设置弹窗等需保留输入时不关闭 */
   closeOnOverlay?: boolean
 }) {
+  // 挂载时聚焦容器、Escape 关闭；aria-modal 屏蔽辅助技术读到背景控件
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    ref.current?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <div
       className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
       onClick={closeOnOverlay ? onClose : undefined}
     >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+      <div ref={ref} role="dialog" aria-modal="true" tabIndex={-1} onClick={(e) => e.stopPropagation()}>{children}</div>
     </div>
   )
 }
