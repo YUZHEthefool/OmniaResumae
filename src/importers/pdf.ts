@@ -26,6 +26,8 @@ async function loadPdfjs() {
       pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
       return pdfjs
     })()
+    // 失败则清缓存，否则永久卡在 rejected，PDF 导入要刷新整页才恢复
+    pdfjsPromise.catch(() => { pdfjsPromise = null })
   }
   return pdfjsPromise
 }
@@ -41,8 +43,9 @@ export async function extractPdfBlocks(file: File): Promise<PdfBlock[]> {
       const page = await pdf.getPage(p)
       const content = await page.getTextContent()
       for (const item of content.items as Array<{ str: string; transform: number[]; height: number; fontName?: string }>) {
+        // marked-content 项可能无 str（未来选项/库升级）；防御，避免 undefined.trim() 抛错
+        if (typeof item.str !== 'string' || !item.str.trim()) continue
         const text = item.str
-        if (!text.trim()) continue
         blocks.push({
           text,
           x: item.transform[4],
@@ -76,7 +79,7 @@ export function mergeLines(blocks: PdfBlock[]): { text: string; y: number; page:
       return { text: text.trim(), y, page, size: Math.max(...bs.map((b) => b.size)) }
     })
     .filter((l) => l.text)
-    .sort((a, b) => a.page - b.page || b.y - a.y) // PDF y 轴向下递增
+    .sort((a, b) => a.page - b.page || b.y - a.y) // pdfjs transform[5] 是 PDF 用户空间 y（向上递增），降序=从上到下
 }
 
 /** 启发式：把行映射到 fragment（宽松版，主要产出 raw text 供 AI 结构化） */
