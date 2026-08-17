@@ -278,3 +278,11 @@
 .export-single .tpl-serif .award { font-size: 10.5px; margin-bottom: 4px; }
 .export-single .tpl-serif .wf-text { font-size: 11px; }
 .export-single .tpl-serif .keywords { margin-bottom: 14px; }
+/* 再紧凑一档：正文/要点压到 10.5px，行高与间距再收 */
+.export-single .tpl-serif .entry-points li,
+.export-single .tpl-serif .project-points li,
+.export-single .tpl-serif .project-desc,
+.export-single .tpl-serif .match-body { font-size: 10.5px; line-height: 1.4; }
+.export-single .tpl-serif .entry { margin-bottom: 7px; }
+.export-single .tpl-serif .project { margin-bottom: 7px; }
+.export-single .tpl-serif .section { margin-bottom: 11px; }

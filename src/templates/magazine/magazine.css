@@ -228,3 +228,11 @@
 .export-single .tpl-mag .wf-text { font-size: 11px; }
 .export-single .tpl-mag .keywords { margin-bottom: 12px; }
 .export-single .tpl-mag .colophon { margin-top: 14px; padding-top: 6px; }
+/* 再紧凑一档：正文/要点压到 10.5px，行高与间距再收 */
+.export-single .tpl-mag .entry-points li,
+.export-single .tpl-mag .project-points li,
+.export-single .tpl-mag .project-desc,
+.export-single .tpl-mag .match-body { font-size: 10.5px; line-height: 1.4; }
+.export-single .tpl-mag .entry { margin-bottom: 8px; }
+.export-single .tpl-mag .project { margin-bottom: 8px; }
+.export-single .tpl-mag .section { margin-bottom: 11px; }

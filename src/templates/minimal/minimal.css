@@ -344,3 +344,13 @@
 .export-single .tpl-minimal .wf { gap: 8px; }
 .export-single .tpl-minimal .wf-text { font-size: 11.5px; }
 .export-single .tpl-minimal .keywords { margin-bottom: 16px; }
+/* 再紧凑一档：正文/要点压到 10.5px（中文可读底线），行高与间距再收 */
+.export-single .tpl-minimal .entry-points li,
+.export-single .tpl-minimal .project-points li,
+.export-single .tpl-minimal .project-desc,
+.export-single .tpl-minimal .pair-body,
+.export-single .tpl-minimal .domain-row,
+.export-single .tpl-minimal .wf-text { font-size: 10.5px; line-height: 1.4; }
+.export-single .tpl-minimal .entry { margin-bottom: 8px; }
+.export-single .tpl-minimal .project { margin-bottom: 8px; }
+.export-single .tpl-minimal .section { margin-bottom: 13px; }
