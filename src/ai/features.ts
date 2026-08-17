@@ -70,7 +70,7 @@ export async function tailorToCompany(
   // 把简历拍平成对 AI 友好的文本
   const projects = resume.sections.find((s) => s.type === 'projects')?.items as
     { id: string; name: Localized; description: Localized; highlights: Localized[]; keywords?: string[] }[] | undefined
-  const projDigest = (projects ?? []).map((p, i) => `P${i + 1}[id=${p.id}] ${pick(p.name, locale)}: ${pick(p.description, locale)} | 要点: ${p.highlights.map((h) => pick(h, locale)).filter(Boolean).join(' / ')}`).join('\n')
+  const projDigest = (projects ?? []).map((p, i) => `P${i + 1}[id=${p.id}] ${pick(p.name, locale)}: ${pick(p.description, locale)} | 要点: ${(p.highlights ?? []).map((h) => pick(h, locale)).filter(Boolean).join(' / ')}`).join('\n')
   const lang = locale === 'zh' ? '中文' : 'English'
 
   const sys = `你是资深技术招聘顾问。根据目标公司背景与岗位描述，对候选人的简历提出定向包装建议（${lang}）。
