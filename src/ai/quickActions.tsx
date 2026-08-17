@@ -143,9 +143,18 @@ export function TailorAction() {
       }
       if (acceptMatches) {
         let sec = d.sections.find((s) => s.type === 'matches')
-        const matchItems = prop.matches.map((m, i) => ({ id: `match_ai_${i}`, tag: { [locale]: m.tag } as { zh?: string; en?: string }, body: { [locale]: m.body } as { zh?: string; en?: string } }))
-        if (sec) sec.items = matchItems as never[]
-        else d.sections.push({ id: 'sec_match_ai', type: 'matches', title: { zh: '招聘要求匹配', en: 'Match' }, layout: 'sidebar', items: matchItems as never[], visible: true })
+        if (sec) {
+          // 按索引保留另一语言，与 highlights 分支一致，避免整组替换擦掉双语简历的非当前语言
+          const old = sec.items as { tag?: { zh?: string; en?: string }; body?: { zh?: string; en?: string } }[]
+          sec.items = prop.matches.map((m, i) => ({
+            id: `match_ai_${i}`,
+            tag: { ...(old[i]?.tag ?? {}), [locale]: m.tag } as { zh?: string; en?: string },
+            body: { ...(old[i]?.body ?? {}), [locale]: m.body } as { zh?: string; en?: string },
+          })) as never[]
+        } else {
+          const matchItems = prop.matches.map((m, i) => ({ id: `match_ai_${i}`, tag: { [locale]: m.tag } as { zh?: string; en?: string }, body: { [locale]: m.body } as { zh?: string; en?: string } }))
+          d.sections.push({ id: 'sec_match_ai', type: 'matches', title: { zh: '招聘要求匹配', en: 'Match' }, layout: 'sidebar', items: matchItems as never[], visible: true })
+        }
       }
       if (acceptPride && prop.pride) {
         d.basics.summary = { ...d.basics.summary, [locale]: prop.pride }
