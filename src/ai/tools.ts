@@ -11,6 +11,7 @@ import { uid, SECTION_TITLE_PRESETS } from '@/schema/defaults'
 import { isLocalized, mergeLoc, coerceHighlights, coerceItem, LOC_BASICS_KEYS, LOC_ITEM_KEYS } from '@/schema/coerce'
 import type { Locale, Localized, Resume, SectionType } from '@/types/resume'
 import type { Skill } from '@/skills/types'
+import { listMyRepos, getRepoByName, getRepoDetail } from '@/github/client'
 
 /** 镜像 createItem：按 type 给带 uid + 必填骨架的条目 */
 function baseItem(type: string): Record<string, unknown> {
@@ -78,7 +79,7 @@ function snapshot(r: Resume, _locale: Locale): string {
 }
 
 /* ─── 工具构造 ─── */
-export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[] {
+export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedResumeId?: string): ToolDef[] {
   const tools: ToolDef[] = [
     {
       name: 'get_resume',
@@ -144,12 +145,15 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
             else if (typeof targetRole === 'string') d.meta.targetRole = mergeLoc(d.meta.targetRole, { [locale]: targetRole } as Localized)
           }
           if (keywords) {
-            // 按语种逐条合并（保留另一语言），而非整组替换丢失旧条目
+            // 按当前语种值匹配旧条目以保留另一语言（模型重排序也不会把中英文交叉配错）；
+            // 模型若直接给完整 {zh,en} 对象则原样采用。旧实现按索引合并，重排序会交叉。
             const prev = d.meta.keywords ?? []
-            d.meta.keywords = (keywords as unknown[]).map((k, i): Localized => {
-              if (k && typeof k === 'object' && ('zh' in k || 'en' in k)) return mergeLoc(prev[i], k as Localized) ?? { zh: undefined, en: undefined }
-              if (typeof k === 'string') return mergeLoc(prev[i], { [locale]: k } as Localized) ?? { zh: undefined, en: undefined }
-              return prev[i] ?? { zh: undefined, en: undefined }
+            d.meta.keywords = (keywords as unknown[]).map((k): Localized => {
+              if (isLocalized(k)) return { zh: k.zh, en: k.en }
+              const str = typeof k === 'string' ? k : ''
+              if (!str.trim()) return { zh: undefined, en: undefined }
+              const old = prev.find((p) => (p?.[locale] ?? '') === str)
+              return old ? { ...old, [locale]: str } : ({ [locale]: str } as Localized)
             })
           }
         })
@@ -196,10 +200,13 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
       input_schema: { type: 'object', properties: { section_id: { type: 'string' } }, required: ['section_id'], additionalProperties: false },
       run: (args) => {
         const { section_id } = args as { section_id: string }
+        let found = false
         useResumeStore.getState().update((d) => {
+          const before = d.sections.length
           d.sections = d.sections.filter((s) => s.id !== section_id)
+          found = d.sections.length < before
         })
-        return 'ok'
+        return found ? 'ok' : '未找到 section'
       },
     },
     {
@@ -217,13 +224,17 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
         additionalProperties: false,
       },
       run: (args) => {
-        const { section_id, title, layout, visible } = args as { section_id: string; title?: Localized; layout?: 'main' | 'sidebar'; visible?: boolean }
+        const { section_id, title, layout, visible } = args as { section_id: string; title?: Localized | string; layout?: 'main' | 'sidebar'; visible?: boolean }
         let found = false
         useResumeStore.getState().update((d) => {
           const s = d.sections.find((x) => x.id === section_id)
           if (!s) return
           found = true
-          if (title) s.title = { zh: title.zh ?? s.title.zh, en: title.en ?? s.title.en }
+          // 模型可能把 title 传成裸字符串（与 add_section 一致地强制为 {[locale]:title}），否则 title.zh 为 undefined 静默无效
+          if (title) {
+            const t = typeof title === 'string' ? { [locale]: title } as Localized : title
+            s.title = { zh: t.zh ?? s.title.zh, en: t.en ?? s.title.en }
+          }
           if (layout) s.layout = layout
           if (visible !== undefined) s.visible = visible
         })
@@ -335,12 +346,15 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
       },
       run: (args) => {
         const { section_id, item_id } = args as { section_id: string; item_id: string }
+        let found = false
         useResumeStore.getState().update((d) => {
           const s = d.sections.find((x) => x.id === section_id)
           if (!s) return
+          const before = s.items.length
           s.items = s.items.filter((x) => (x as { id: string }).id !== item_id)
+          found = s.items.length < before
         })
-        return 'ok'
+        return found ? 'ok' : '未找到 item'
       },
     },
   ]
@@ -363,5 +377,88 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null): ToolDef[
     })
   }
 
+  // 防止运行中切换/新建简历：工具执行时若当前简历已不是发起会话的那份，跳过编辑，
+  // 避免 AI 改动落到另一份简历而撤销快照仍指向原简历（数据错位）。
+  if (expectedResumeId) {
+    for (const tool of tools) {
+      const orig = tool.run
+      tool.run = (args) => {
+        if (useResumeStore.getState().current?.id !== expectedResumeId) return '会话所在简历已切换，本次编辑已跳过'
+        return orig(args)
+      }
+    }
+  }
   return tools
+}
+
+/* ─── GitHub 工具（只读）：让 AI 能查用户的真实仓库，据此填充项目段落 ─── */
+/**
+ * 构造 GitHub 工具集。PAT 为空时返回空数组——模型不会知道这些工具的存在，
+ * 也就不会尝试调用；system prompt 另提示用户去「设置」配 PAT（按需披露，避免模型以为能用却失败）。
+ * 工具只读（列仓库 / 读 README 与详情），不改仓库；PAT 仅发往 api.github.com，从不进入简历数据或导出。
+ */
+export function buildGithubTools(pat: string): ToolDef[] {
+  if (!pat) return []
+  return [
+    {
+      name: 'list_my_repos',
+      description:
+        '列出当前 GitHub 认证用户（PAT 持有者）的仓库：名称、描述、stars、主语言、topics、URL、最后更新时间。用于了解用户有哪些真实项目可写入简历。需先在「设置」配置 GitHub PAT。',
+      input_schema: { type: 'object', properties: {}, additionalProperties: false },
+      run: async () => {
+        try {
+          const repos = await listMyRepos(pat)
+          if (!repos.length) return '没有找到非 fork、非归档的仓库'
+          return JSON.stringify(
+            repos.slice(0, 30).map((r) => ({
+              full_name: r.full_name,
+              description: (r.description ?? '').slice(0, 200),
+              stars: r.stargazers_count,
+              language: r.language,
+              topics: (r.topics ?? []).slice(0, 10),
+              url: r.html_url,
+              updated_at: r.updated_at,
+            })),
+          )
+        } catch (e) {
+          return `GitHub 查询失败：${(e as Error).message}`
+        }
+      },
+    },
+    {
+      name: 'get_repo_detail',
+      description:
+        '取某仓库的详情：语言列表、stars、topics、描述、README 内容。用于给项目段落填 keywords/stars/description/highlights。参数 owner/repo（如 "YUZHEthefool/OmniaResumae"）。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者（用户名或组织名）' },
+          repo: { type: 'string', description: '仓库名' },
+        },
+        required: ['owner', 'repo'],
+        additionalProperties: false,
+      },
+      run: async (args) => {
+        const { owner, repo } = args as { owner: string; repo: string }
+        try {
+          const r = await getRepoByName(owner, repo, pat)
+          if (!r) return `未找到仓库 ${owner}/${repo}`
+          const d = await getRepoDetail(r, pat)
+          return JSON.stringify({
+            full_name: r.full_name,
+            description: d.description,
+            stars: d.stars,
+            languages: d.languages,
+            topics: d.topics,
+            url: d.url,
+            homepage: r.homepage,
+            // README 截断：够 AI 提取要点即可，避免长 README 撑爆对话上下文
+            readme: d.readme.slice(0, 6000),
+          })
+        } catch (e) {
+          return `GitHub 查询失败：${(e as Error).message}`
+        }
+      },
+    },
+  ]
 }
