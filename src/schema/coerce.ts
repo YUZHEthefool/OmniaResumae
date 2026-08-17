@@ -11,10 +11,11 @@ export function isLocalized(v: unknown): v is Localized {
   return !!v && typeof v === 'object' && ('zh' in v || 'en' in v)
 }
 
-/** 逐语种合并 Localized（保留已有语言，补入新语言） */
+/** 逐语种合并 Localized（保留已有语言，补入新语言）。空串/纯空白视为"未提供"，回退到 base，避免 AI 传 '' 擦掉另一语言已有翻译。 */
 export function mergeLoc(base: Localized | undefined, patch: Localized | undefined): Localized | undefined {
   if (!patch) return base
-  return { zh: patch.zh ?? base?.zh, en: patch.en ?? base?.en }
+  const clean = (v: string | undefined) => (v && v.trim() ? v : undefined)
+  return { zh: clean(patch.zh) ?? base?.zh, en: clean(patch.en) ?? base?.en }
 }
 
 /** 把字符串或对象规范化为 Localized：对象取 zh/en，字符串按当前语种写入，空值返回 undefined */
@@ -59,6 +60,9 @@ export function coerceItem(type: string, item: Record<string, unknown>, locale: 
       if (c) out[k] = c
     } else if (k === 'highlights') {
       out[k] = coerceHighlights(v, locale)
+    } else if (k === 'keywords' || k === 'languages' || k === 'courses') {
+      // 这些字段运行时按数组用（模板 .join / .map）；模型若误传字符串会原样写入致渲染崩溃，兜底成数组
+      out[k] = Array.isArray(v) ? v : []
     } else {
       out[k] = v
     }
