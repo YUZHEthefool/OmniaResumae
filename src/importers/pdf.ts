@@ -87,7 +87,8 @@ export function pdfLinesToFragment(lines: { text: string; y: number; page: numbe
   const frag: ImportFragment = { sections: [] }
   const maxSize = Math.max(...lines.map((l) => l.size), 0)
   const nameLine = lines.find((l) => l.size === maxSize && l.size >= 16)
-  const langHint: 'zh' | 'en' = nameLine && /[一-鿿]/.test(lines.map((l) => l.text).join('')) ? 'zh' : 'en'
+  // 语言检测只取决于 CJK 字符是否出现；旧 `nameLine &&` 短路会在无大字标题（统一字号/最大字号<16）的中文 PDF 上误判 en，把中文塞进 {en} 槽
+  const langHint: 'zh' | 'en' = /[一-鿿]/.test(lines.map((l) => l.text).join('')) ? 'zh' : 'en'
 
   if (nameLine) {
     frag.basics = { name: localize(nameLine.text, langHint) }
