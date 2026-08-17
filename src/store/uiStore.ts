@@ -20,6 +20,8 @@ interface UIState {
   panelRatio: number // 左侧占比 0.2~0.8
   copilotOpen: boolean // AI Copilot 右侧面板是否展开（默认收起，按需点开）
   theme: Theme
+  importOpen: boolean // 导入对话框是否打开（由顶栏按钮或拖拽文件触发）
+  importFile: File | null // 拖拽带入、待 ImportDialog 消费的文件
   setLocale: (l: Locale) => void
   setTemplate: (id: string) => void
   /** 仅写 uiStore.templateId（不镜像）——供 App 从 resume.templateId 重水合用 */
@@ -29,6 +31,8 @@ interface UIState {
   setCopilotOpen: (v: boolean) => void
   setTheme: (t: Theme) => void
   toggleTheme: () => void
+  setImportOpen: (v: boolean) => void
+  setImportFile: (f: File | null) => void
 }
 
 /** 把 theme 同步到 <html> 的 dark 类 */
@@ -46,6 +50,8 @@ export const useUIStore = create<UIState>()(
       panelRatio: 0.42,
       copilotOpen: false,
       theme: 'light',
+      importOpen: false,
+      importFile: null,
       setLocale: (locale) => set({ locale }),
       setTemplate: (templateId) => {
         set({ templateId })
@@ -69,6 +75,8 @@ export const useUIStore = create<UIState>()(
         applyTheme(next)
         set({ theme: next })
       },
+      setImportOpen: (importOpen) => set({ importOpen }),
+      setImportFile: (importFile) => set({ importFile }),
     }),
     {
       name: 'omniaresumae-ui',
