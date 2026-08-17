@@ -11,6 +11,7 @@ import { listTemplates, unregisterTemplate } from '@/templates/registry'
 import { exportPDF, printResume, exportImage } from '@/export/pdf'
 import { resumeToMarkdown } from '@/export/markdown'
 import { resumeToJsonResume } from '@/export/jsonResume'
+import { exportHTML } from '@/export/html'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -31,6 +32,10 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
   const theme = useUIStore((s) => s.theme)
   const toggleTheme = useUIStore((s) => s.toggleTheme)
+  const importOpen = useUIStore((s) => s.importOpen)
+  const setImportOpen = useUIStore((s) => s.setImportOpen)
+  const importFile = useUIStore((s) => s.importFile)
+  const setImportFile = useUIStore((s) => s.setImportFile)
 
   const current = useResumeStore((s) => s.current)
   const list = useResumeStore((s) => s.list)
@@ -44,7 +49,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
-  const [dialog, setDialog] = useState<null | 'import' | 'github' | 'settings' | 'studio'>(null)
+  const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio'>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -67,7 +72,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       await exportPDF(previewRef.current, current, locale, mode)
     } catch (e) {
       console.error(e)
-      alert('导出失败：' + (e as Error).message)
+      alert(t('exportFailed', locale) + (e as Error).message)
     } finally {
       setExporting(false)
     }
@@ -85,7 +90,20 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       await exportImage(previewRef.current, current, locale)
     } catch (e) {
       console.error(e)
-      alert('导出失败：' + (e as Error).message)
+      alert(t('exportFailed', locale) + (e as Error).message)
+    } finally {
+      setExporting(false)
+    }
+  }
+  const doExportHtml = async () => {
+    if (!current || !previewRef.current) return
+    setExporting(true)
+    setMenu(null)
+    try {
+      await exportHTML(previewRef.current, current, locale)
+    } catch (e) {
+      console.error(e)
+      alert(t('exportFailed', locale) + (e as Error).message)
     } finally {
       setExporting(false)
     }
@@ -190,6 +208,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 onCopy={() => { void duplicate(r.id) }}
                 onRemove={() => {
                   if (!window.confirm(t('confirmDeleteResume', locale).replace('{name}', r.name))) return
+                  setMenu(null)
                   void remove(r.id)
                 }}
               >
@@ -263,7 +282,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <div className="flex-1" />
 
       {/* 后续 Phase 占位 */}
-      <button className={btnClsGhost} title={t('import', locale)} onClick={() => setDialog('import')}>{t('import', locale)}</button>
+      <button className={btnClsGhost} title={t('import', locale)} onClick={() => setImportOpen(true)}>{t('import', locale)}</button>
       <button className={btnClsGhost} title={t('github', locale)} onClick={() => setDialog('github')}>{t('github', locale)}</button>
       <button className={btnClsGhost} title={t('templateStudio', locale)} onClick={() => setDialog('studio')}>{t('templateStudio', locale)}</button>
       {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
@@ -288,18 +307,21 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
           onClick={() => setMenu(menu === 'export' ? null : 'export')}
           disabled={exporting}
         >
-          {exporting ? '生成中…' : t('export', locale)} ▾
+          {exporting ? t('exporting', locale) : t('export', locale)} ▾
         </button>
         {menu === 'export' && (
           <Dropdown align="right">
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => doExport('single')}>
-              单页 PDF（缩放到一页 A4）
+              {t('exportSinglePdf', locale)}
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => doExport('multi')}>
-              多页 PDF（按 A4 切片保真）
+              {t('exportMultiPdf', locale)}
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportImage}>
-              导出图片（PNG）
+              {t('exportImage', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportHtml}>
+              {t('exportHtml', locale)}
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJson}>
               {t('exportJson', locale)}
@@ -312,14 +334,14 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <div className="border-t border-chrome-border my-1" />
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>
-              打印 / 另存为 PDF（矢量可选）
+              {t('printVector', locale)}
             </button>
           </Dropdown>
         )}
       </div>
 
       {/* 弹窗 */}
-      {dialog === 'import' && <ImportDialog onClose={() => setDialog(null)} />}
+      {importOpen && <ImportDialog initialFile={importFile} onClose={() => { setImportOpen(false); setImportFile(null) }} />}
       {dialog === 'github' && <GitHubImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === 'studio' && <TemplateStudioDialog onClose={() => setDialog(null)} />}
@@ -360,6 +382,7 @@ function DropdownItem({
   onCopy?: () => void
   onRemove?: () => void
 }) {
+  const locale = useUIStore((s) => s.locale)
   return (
     <div className={clsx('flex items-center group rounded', active && 'bg-chrome-bg')}>
       <button className="flex-1 text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={onClick}>
@@ -369,7 +392,7 @@ function DropdownItem({
         <button
           className="px-1.5 py-1 text-chrome-muted opacity-0 group-hover:opacity-100 hover:text-chrome-ink text-xs"
           onClick={(e) => { e.stopPropagation(); onCopy() }}
-          title="复制"
+          title={t('duplicate', locale)}
         >
           ⧉
         </button>
@@ -378,7 +401,7 @@ function DropdownItem({
         <button
           className="px-2 py-1 text-chrome-muted opacity-0 group-hover:opacity-100 hover:text-red-600 text-xs"
           onClick={(e) => { e.stopPropagation(); onRemove() }}
-          title="删除"
+          title={t('deleteItem', locale)}
         >
           ✕
         </button>
