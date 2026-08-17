@@ -183,6 +183,8 @@ export const en: Dict = {
   editPreviewTitle: 'Click text in the preview to edit directly',
   pageGuide: '📐 Page breaks',
   pageGuideTitle: 'Show approx. A4 multi-page PDF break positions (preview width as A4 width)',
+  singlePreview: 'Single-page preview',
+  singlePreviewTitle: 'Preview with the single-page PDF compact + split-column layout (brutalist/custom stay single-column)',
   dropHere: 'Drop to import',
   dropHint: 'Supports .md / .pdf / .tex / .json',
   singlePdfWarn: 'Content is long (about {n} pages); scaled to a single page (~{pct}%). For larger text, use "Multi-page PDF".',

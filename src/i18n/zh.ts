@@ -185,6 +185,8 @@ export const zh = {
   editPreviewTitle: '开启后可直接点击预览中的文本编辑',
   pageGuide: '📐 分页线',
   pageGuideTitle: '显示 A4 多页 PDF 的分页位置（近似，以预览宽度为 A4 宽）',
+  singlePreview: '单页预览',
+  singlePreviewTitle: '按单页 PDF 的紧凑+拆栏布局预览（brutalist/custom 仍单栏）',
   dropHere: '放下即导入',
   dropHint: '支持 .md / .pdf / .tex / .json',
   singlePdfWarn: '内容较长（约 {n} 页），已缩放至单页（约 {pct}%）。如需更大字号，建议改用「多页 PDF」。',

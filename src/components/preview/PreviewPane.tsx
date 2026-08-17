@@ -19,6 +19,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
   const update = useResumeStore((s) => s.update)
   const [editing, setEditing] = useState(false)
   const [showPages, setShowPages] = useState(false)
+  const [singlePreview, setSinglePreview] = useState(false)
   const [guide, setGuide] = useState<{ h: number; count: number }>({ h: 0, count: 0 })
 
   const Template = useMemo(() => getTemplate(templateId) ?? getTemplate('serif-classic'), [templateId])
@@ -84,18 +85,31 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
     <div className="h-full flex flex-col bg-chrome-bg">
       {/* 预览工具栏 */}
       <div className="flex items-center justify-end gap-2 px-4 py-1.5 border-b border-chrome-border bg-chrome-panel">
+        {/* 单页预览：给预览根挂 .export-single，复用单页导出的紧凑+拆栏 CSS，所见即所得。
+            与「分页线」「编辑预览」语义冲突，开启时互斥（开单页预览则关另两者）。 */}
+        <button
+          type="button"
+          onClick={() => { setSinglePreview((v) => !v); if (!singlePreview) { setShowPages(false); setEditing(false) } }}
+          className={`px-2.5 py-1 text-xs rounded border ${
+            singlePreview ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
+          }`}
+          title={t('singlePreviewTitle', locale)}
+        >
+          {t('singlePreview', locale)}
+        </button>
         <button
           type="button"
           onClick={() => setShowPages((v) => !v)}
           className={`px-2.5 py-1 text-xs rounded border ${
             showPages ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
-          }`}
+          } disabled:opacity-30 disabled:cursor-not-allowed`}
           title={t('pageGuideTitle', locale)}
+          disabled={singlePreview}
         >
           {t('pageGuide', locale)}
         </button>
         {/* 编辑预览：仅 Brutalist 模板输出 data-edit 钩子，其它模板点击无反应，故仅在该模板下显示按钮 */}
-        {templateId === 'brutalist' && (
+        {templateId === 'brutalist' && !singlePreview && (
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
@@ -112,6 +126,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
         <div className="mx-auto" style={{ width: '960px', transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
           <div
             ref={ref}
+            className={singlePreview ? 'export-single' : undefined}
             style={{ outline: editing ? '1px dashed #999' : 'none', position: 'relative' }}
           >
             {resume && Template ? (
