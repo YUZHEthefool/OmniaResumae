@@ -10,6 +10,7 @@ import type {
   WorkflowStep, CommunityItem,
 } from '@/types/resume'
 import { pick } from '@/types/resume'
+import { fmtDateRange } from '@/utils/localize'
 import { registerTemplate, type TemplateProps, type TemplateMeta } from '../registry'
 import './minimal.css'
 
@@ -43,6 +44,13 @@ const MinimalTemplate: FC<TemplateProps> = ({ resume, locale }) => {
             {resume.basics.phone && <div>{resume.basics.phone}</div>}
             {resume.basics.url && <a href={resume.basics.url}>{resume.basics.url.replace(/^https?:\/\//, '')}</a>}
             {L(resume.basics.location, locale) && <div>{L(resume.basics.location, locale)}</div>}
+            {(resume.basics.profiles ?? []).length > 0 && (
+              <div>
+                {(resume.basics.profiles ?? []).map((p) => (
+                  <a key={p.url} href={p.url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>{p.network} · {p.username}</a>
+                ))}
+              </div>
+            )}
           </div>
         </header>
 
@@ -100,7 +108,7 @@ function renderBody(section: Section, locale: Locale) {
 function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; locale: Locale; edu?: boolean }) {
   const w = item as WorkItem
   const e = item as EducationItem
-  const date = [item.startDate, item.endDate].filter(Boolean).join(' — ')
+  const date = fmtDateRange(item.startDate, item.endDate, locale)
   const points = (item.highlights ?? []).filter((h) => L(h, locale))
   return (
     <div className="entry">
