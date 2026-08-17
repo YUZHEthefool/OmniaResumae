@@ -39,9 +39,9 @@ export function resumeToJsonResume(resume: Resume, locale: Locale): Record<strin
       startDate: w.startDate || undefined,
       endDate: w.endDate || undefined,
       url: w.url || undefined,
-      summary: L(w.location, locale) || undefined,
       highlights: clean((w.highlights ?? []).map((h) => L(h, locale) || undefined)),
     }
+    // JSON Resume 的 work 无 location 字段；旧实现把 location 塞进 summary（语义为职位描述）会误导消费方，故省略
     return (o.name || o.position) ? o : undefined
   }))
   if (work.length) out.work = work
@@ -64,7 +64,7 @@ export function resumeToJsonResume(resume: Resume, locale: Locale): Record<strin
     const o: Record<string, unknown> = {
       name: L(p.name, locale),
       description: L(p.description, locale) || undefined,
-      url: p.url || undefined,
+      url: p.url || p.repoUrl || undefined,
       keywords: p.keywords,
       highlights: clean((p.highlights ?? []).map((h) => L(h, locale) || undefined)),
     }
