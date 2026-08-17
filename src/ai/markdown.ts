@@ -10,9 +10,11 @@ marked.setOptions({
   gfm: true,
 })
 
-// 强制给 target=_blank 的 <a> 加 rel="noopener noreferrer"，防 tabnabbing（DOMPurify 已剥 javascript:/data: href）
+// 强制所有 <a> 在新标签打开并加 rel="noopener noreferrer"：marked 默认不设 target，否则链接在当前标签
+// 打开会离开应用、丢失未保存的 UI 状态；旧钩子只在 target=_blank 时加 rel，而 marked 从不设 target，故 rel 形同虚设。
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+  if (node.tagName === 'A') {
+    node.setAttribute('target', '_blank')
     node.setAttribute('rel', 'noopener noreferrer')
   }
 })
