@@ -20,6 +20,7 @@ import type {
   WorkflowStep, CommunityItem,
 } from '@/types/resume'
 import { pick } from '@/types/resume'
+import { fmtDateRange } from '@/utils/localize'
 import { useTemplateStore } from '@/store/templateStore'
 import { useScopedStyle } from './cssRuntime'
 import { type TemplateProps } from '../registry'
@@ -62,6 +63,9 @@ export function CustomBody({
             {L(resume.basics.location, locale) && (
               <span className="contact-item">{L(resume.basics.location, locale)}</span>
             )}
+            {(resume.basics.profiles ?? []).map((p) => (
+              <a key={p.url} className="contact-item" href={p.url} target="_blank" rel="noreferrer">{p.network} · {p.username}</a>
+            ))}
           </div>
           {summary && <p className="summary">{summary}</p>}
         </header>
@@ -156,7 +160,7 @@ function renderItem(section: Section, locale: Locale): ReactNode {
 function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: Locale; edu?: boolean }) {
   const w = item as WorkItem
   const e = item as EducationItem
-  const date = [item.startDate, item.endDate].filter(Boolean).join(' — ')
+  const date = fmtDateRange(item.startDate, item.endDate, locale)
   const points = (item.highlights ?? []).filter((h) => L(h, locale))
   return (
     <div className="entry">
