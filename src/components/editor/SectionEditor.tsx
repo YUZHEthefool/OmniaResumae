@@ -44,6 +44,8 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
   const removeSection = useResumeStore((s) => s.removeSection)
   const toggleVisible = useResumeStore((s) => s.toggleSectionVisible)
   const moveItemTo = useResumeStore((s) => s.moveItemTo)
+  const sections = useResumeStore((s) => s.current?.sections ?? [])
+  const secIdx = sections.findIndex((s) => s.id === section.id)
   const [open, setOpen] = useState(true)
 
   const Editor = EDITORS[section.type]
@@ -137,9 +139,9 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
         >
           {section.visible ? '👁' : '⊘'}
         </button>
-        <button type="button" title={t('moveUp', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, -1)}>▲</button>
-        <button type="button" title={t('moveDown', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1" onClick={() => moveSection(section.id, 1)}>▼</button>
-        <button type="button" title={t('deleteSection', locale)} className="text-xs text-chrome-muted hover:text-red-600 px-1" onClick={() => removeSection(section.id)}>✕</button>
+        <button type="button" title={t('moveUp', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1 disabled:opacity-30 disabled:hover:text-chrome-muted" disabled={secIdx <= 0} onClick={() => moveSection(section.id, -1)}>▲</button>
+        <button type="button" title={t('moveDown', locale)} className="text-xs text-chrome-muted hover:text-chrome-ink px-1 disabled:opacity-30 disabled:hover:text-chrome-muted" disabled={secIdx >= sections.length - 1} onClick={() => moveSection(section.id, 1)}>▼</button>
+        <button type="button" title={t('deleteSection', locale)} className="text-xs text-chrome-muted hover:text-red-600 px-1" onClick={() => { const name = section.title[locale] || section.title.zh || section.title.en || section.type; if (!window.confirm(t('confirmDeleteSection', locale).replace('{name}', name))) return; removeSection(section.id) }}>✕</button>
       </div>
 
       {open && (
@@ -174,8 +176,8 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
                               #{i + 1} {itemTitle(it, locale, SECTION_TITLE_PRESETS[section.type]?.[locale] || section.type)}
                             </span>
                             <div className="flex gap-1 text-chrome-muted text-xs">
-                              <button type="button" title={t('moveUp', locale)} onClick={() => moveItem(it.id, -1)}>▲</button>
-                              <button type="button" title={t('moveDown', locale)} onClick={() => moveItem(it.id, 1)}>▼</button>
+                              <button type="button" title={t('moveUp', locale)} className="disabled:opacity-30" disabled={i <= 0} onClick={() => moveItem(it.id, -1)}>▲</button>
+                              <button type="button" title={t('moveDown', locale)} className="disabled:opacity-30" disabled={i >= section.items.length - 1} onClick={() => moveItem(it.id, 1)}>▼</button>
                               <button type="button" title={t('duplicateItem', locale)} onClick={() => duplicateItem(it.id)}>⧉</button>
                               <button type="button" title={t('deleteItem', locale)} className="hover:text-red-600" onClick={() => removeItem(it.id)}>✕</button>
                             </div>
