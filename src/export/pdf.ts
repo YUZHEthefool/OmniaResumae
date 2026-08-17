@@ -6,6 +6,7 @@
 import { slugify } from '@/utils/slug'
 import type { Resume, Locale } from '@/types/resume'
 import { pick } from '@/types/resume'
+import { t } from '@/i18n'
 
 export type ExportMode = 'single' | 'multi'
 
@@ -44,8 +45,9 @@ const awaitImg = (img: HTMLImageElement) =>
     img.onerror = () => res()
   })
 
-/** 一键导出 PDF。mode: single=缩放到一页 A4；multi=按 A4 高度切片（多页保真）。 */
-export async function exportPDF(node: HTMLElement, resume: Resume, locale: Locale, mode: ExportMode = 'single') {
+/** 一键导出 PDF。mode: single=缩放到一页 A4；multi=按 A4 高度切片（多页保真）。
+ *  返回 { warn? }：single 模式下若内容被缩到 <80%（>1.25 页），附提示文案供调用方弹窗。 */
+export async function exportPDF(node: HTMLElement, resume: Resume, locale: Locale, mode: ExportMode = 'single'): Promise<{ warn?: string }> {
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import('html2canvas'),
     import('jspdf'),
@@ -113,6 +115,7 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageW = pdf.internal.pageSize.getWidth()
   const pageH = pdf.internal.pageSize.getHeight()
+  let warn: string | undefined
 
   if (mode === 'multi') {
     // 多页：按 A4 高度切片，页间 6pt 重叠避免割断粗边框。
@@ -168,10 +171,19 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     pdf.setFillColor(255, 255, 255)
     pdf.rect(0, 0, pageW, pageH, 'F')
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, imgW, imgH)
+
+    // 长简历反馈：缩放因子 < 80%（内容 > 1.25 页）时附提示，让用户知情并建议多页
+    const scalePct = Math.round(Math.min(imgW / pageW, imgH / pageH) * 100)
+    if (scalePct < 80) {
+      const naturalH = (canvas.height * pageW) / canvas.width // 按 A4 宽铺满时的高度(pt)
+      const pages = Math.max(2, Math.ceil(naturalH / pageH))
+      warn = t('singlePdfWarn', locale).replace('{n}', String(pages)).replace('{pct}', String(scalePct))
+    }
   }
 
   const name = slugify(pick(resume.basics.name, locale, 'resume'))
   pdf.save(`${name}_${locale}.pdf`)
+  return { warn }
 }
 
 /** 导出为 PNG 图片：离屏按 A4 宽渲染整张简历（含 .export-single 紧凑布局 + 头像预裁剪），canvas 直接出 PNG 下载。 */

@@ -69,7 +69,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     setExporting(true)
     setMenu(null)
     try {
-      await exportPDF(previewRef.current, current, locale, mode)
+      const { warn } = await exportPDF(previewRef.current, current, locale, mode)
+      if (warn) alert(warn)
     } catch (e) {
       console.error(e)
       alert(t('exportFailed', locale) + (e as Error).message)

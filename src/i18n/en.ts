@@ -185,6 +185,7 @@ export const en: Dict = {
   pageGuideTitle: 'Show approx. A4 multi-page PDF break positions (preview width as A4 width)',
   dropHere: 'Drop to import',
   dropHint: 'Supports .md / .pdf / .tex / .json',
+  singlePdfWarn: 'Content is long (about {n} pages); scaled to a single page (~{pct}%). For larger text, use "Multi-page PDF".',
   errTitle: 'Render error (blank screen caught)',
   retry: 'Retry',
   aiModel: 'AI Model',
