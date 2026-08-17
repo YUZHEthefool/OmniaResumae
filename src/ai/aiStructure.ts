@@ -95,12 +95,19 @@ ${rawText.slice(0, 24000)}
 export function normalizeToResume(data: unknown, locale: Locale): Resume {
   const d = (data ?? {}) as Record<string, unknown>
   const b = (d.basics ?? {}) as Record<string, unknown>
+  const m = (d.meta ?? {}) as Record<string, unknown>
   const t = nowStamp()
   return {
     id: uid('resume'),
     name: 'AI 导入的简历',
     templateId: 'brutalist',
-    meta: { keywords: [] },
+    meta: {
+      // 保留 AI 生成的 meta（keywords/targetRole）；旧实现硬编码 keywords:[] 丢弃了模型产出
+      targetRole: coerceLoc(m.targetRole, locale),
+      keywords: Array.isArray(m.keywords)
+        ? (m.keywords as unknown[]).map((k) => coerceLoc(k, locale)).filter((k): k is NonNullable<ReturnType<typeof coerceLoc>> => !!k)
+        : undefined,
+    },
     basics: {
       name: coerceLoc(b.name, locale) ?? { zh: '', en: '' },
       nameRomanized: asStr(b.nameRomanized),
