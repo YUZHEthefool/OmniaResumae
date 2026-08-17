@@ -124,7 +124,9 @@ export function parseLatexToFragment(tex: string): ImportFragment {
 
     // 通用 \item 列表（skills / highlights / awards）
     if (!foundEntries) {
-      const items = [...body.matchAll(/\\item\s+([^\n\\]*(?:\n(?!\s*\\)[^\n\\]*)*)/g)].map((x) => clean(x[1]))
+      // 捕获允许内联反斜杠命令（\textbf/\emph/\href 等），行首 \ 才视为下一条命令停止；
+      // 旧 [^\n\\] 在第一个内联命令处截断，丢失 \item Led the \textbf{backend} rewrite 的后半。clean() 再剥命令。
+      const items = [...body.matchAll(/\\item\s+([^\n]*(?:\n(?!\s*\\)[^\n]*)*)/g)].map((x) => clean(x[1]))
       if (items.length) {
         if (type === 'skills') {
           items.forEach((it) => sec.items.push({ id: uid('tex_item'), name: localize(it, langHint), level: localize('', langHint) }))
