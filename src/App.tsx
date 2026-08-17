@@ -2,9 +2,10 @@
  * App：初始化 store + 布局（顶栏 + 左右分栏）
  * 路由：Phase 0/1 为单屏编辑器；多屏路由后续 Phase 按需引入。
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
+import { t } from '@/i18n'
 import '@/templates' // 触发模板自注册（必须在渲染前）
 import { getTemplate } from '@/templates/registry'
 import { TopBar } from '@/components/chrome/TopBar'
@@ -12,6 +13,42 @@ import { SplitPane } from '@/components/chrome/SplitPane'
 import { EditorPanel } from '@/components/editor/EditorPanel'
 import { PreviewPane } from '@/components/preview/PreviewPane'
 import { CopilotPanel } from '@/ai/CopilotPanel'
+
+/** 全局拖拽文件导入：拖文件到页面任意位置即弹出导入对话框并自动加载该文件。 */
+function DropZone() {
+  const [over, setOver] = useState(false)
+  const setImportFile = useUIStore((s) => s.setImportFile)
+  const setImportOpen = useUIStore((s) => s.setImportOpen)
+  const locale = useUIStore((s) => s.locale)
+  useEffect(() => {
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const onDragOver = (e: DragEvent) => { if (hasFiles(e)) { e.preventDefault(); setOver(true) } }
+    const onDragLeave = (e: DragEvent) => { if (e.relatedTarget === null) setOver(false) }
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault()
+      setOver(false)
+      const f = e.dataTransfer?.files?.[0]
+      if (f) { setImportFile(f); setImportOpen(true) }
+    }
+    window.addEventListener('dragover', onDragOver)
+    window.addEventListener('dragleave', onDragLeave)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragover', onDragOver)
+      window.removeEventListener('dragleave', onDragLeave)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [setImportFile, setImportOpen])
+  if (!over) return null
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center pointer-events-none">
+      <div className="bg-white rounded-lg px-8 py-6 text-center shadow-2xl">
+        <div className="text-lg font-semibold">{t('dropHere', locale)}</div>
+        <div className="text-xs text-chrome-muted mt-1">{t('dropHint', locale)}</div>
+      </div>
+    </div>
+  )
+}
 
 export default function App() {
   const init = useResumeStore((s) => s.init)
@@ -74,6 +111,7 @@ export default function App() {
         </div>
         {copilotOpen && <CopilotPanel />}
       </div>
+      <DropZone />
     </div>
   )
 }
