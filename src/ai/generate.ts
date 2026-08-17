@@ -145,9 +145,12 @@ ${sourceText ? sourceText.slice(0, 24000) : '（无）'}
     tools,
     maxSteps: 10,
     temperature: 0.5,
+    // emit_resume 的 tool_use input 是完整简历 JSON，Anthropic 默认 8192 会截断大简历致 JSON 不完整
+    maxTokens: 16000,
     onEvent: () => {},
   })
-  const emit = result.toolCalls.find((tc) => tc.name === 'emit_resume')
+  // 模型可能在一轮内多次调用 emit_resume（先草稿后优化），取最后一次而非第一次
+  const emit = result.toolCalls.filter((tc) => tc.name === 'emit_resume').pop()
   if (!emit) throw new Error('AI 未调用 emit_resume 完成生成（可能模型不支持工具调用，可改选「无 skill」重试）')
   return validateAIResume(normalizeToResume(emit.args, locale))
 }
