@@ -11,6 +11,7 @@ import type {
   MatchItem, DomainItem, CommunityItem,
 } from '@/types/resume'
 import { pick } from '@/types/resume'
+import { fmtDateRange } from '@/utils/localize'
 import { registerTemplate, type TemplateProps, type TemplateMeta } from '../registry'
 import './brutalist.css'
 
@@ -75,6 +76,16 @@ const BrutalistTemplate: FC<TemplateProps> = ({ resume, locale }) => {
                 label={locale === 'zh' ? '网站 / 所在地' : 'Web / Location'}
                 value={[resume.basics.url?.replace(/^https?:\/\//, ''), L(resume.basics.location, locale)].filter(Boolean).join(' · ')}
               />
+            )}
+            {(resume.basics.profiles ?? []).length > 0 && (
+              <div className="meta-group">
+                <span className="meta-label">{locale === 'zh' ? '主页' : 'Profiles'}</span>
+                <span className="meta-value">
+                  {(resume.basics.profiles ?? []).map((p) => (
+                    <a key={p.url} href={p.url} target="_blank" rel="noreferrer" style={{ marginRight: 6 }}>{p.network}</a>
+                  ))}
+                </span>
+              </div>
             )}
           </div>
         </header>
@@ -211,7 +222,7 @@ function SkillTable({ items, locale }: { items: SkillItem[]; locale: Locale }) {
       {items.map((s) => (
         <div className="skill-row" key={s.id}>
           <span className="skill-key">{L(s.name, locale)}</span>
-          <span className="skill-val" data-edit={`level::${s.id}`}>{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</span>
+          <span className="skill-val" data-edit={L(s.level, locale) ? `level::${s.id}` : undefined}>{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</span>
         </div>
       ))}
     </div>
@@ -226,7 +237,9 @@ function ProjectCard({ item, locale }: { item: ProjectItem; locale: Locale }) {
     : badge === 'patent' || badge === 'pat' ? (locale === 'zh' ? '专利' : 'Patent')
     : 'Open Source'
   const link = item.url || item.repoUrl
-  const highlights = (item.highlights ?? []).filter((h) => L(h, locale))
+  // 携带原始（未过滤）索引：data-edit 要编码原始索引，PreviewPane 写回 arr[idx] 才对得上；
+  // 旧实现先 filter 再 map，filtered 索引与 item.highlights 原数组错位，编辑可见的第 N 条会写进另一个空条目。
+  const points = (item.highlights ?? []).map((h, i) => ({ h, i, text: L(h, locale) })).filter((p) => p.text)
   return (
     <div className={`project-card ${badgeClass}`}>
       <div className="project-inner">
@@ -245,10 +258,10 @@ function ProjectCard({ item, locale }: { item: ProjectItem; locale: Locale }) {
         {L(item.description, locale) && (
           <p className="project-desc" data-edit={`description::${item.id}`}>{L(item.description, locale)}</p>
         )}
-        {highlights.length > 0 && (
+        {points.length > 0 && (
           <ul className="project-points">
-            {highlights.map((h, i) => (
-              <li key={i} data-edit={`highlights::${item.id}::${i}`}>{L(h, locale)}</li>
+            {points.map((p) => (
+              <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>
             ))}
           </ul>
         )}
@@ -283,8 +296,10 @@ function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: 
   const name = edu
     ? L((item as EducationItem).institution, locale)
     : `${L((item as WorkItem).position, locale)} · ${L((item as WorkItem).name, locale)}`
-  const date = [item.startDate, item.endDate].filter(Boolean).join(' - ')
-  const highlights = (item.highlights ?? []).filter((h) => L(h, locale))
+  const date = fmtDateRange(item.startDate, item.endDate, locale)
+  // 携带原始（未过滤）索引：data-edit 要编码原始索引，PreviewPane 写回 arr[idx] 才对得上；
+  // 旧实现先 filter 再 map，filtered 索引与 item.highlights 原数组错位，编辑可见的第 N 条会写进另一个空条目。
+  const points = (item.highlights ?? []).map((h, i) => ({ h, i, text: L(h, locale) })).filter((p) => p.text)
   return (
     <div className="entry">
       <div className="entry-title">
@@ -294,10 +309,10 @@ function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: 
       {edu && (item as EducationItem).area && L((item as EducationItem).area, locale) && (
         <p className="entry-summary">{L((item as EducationItem).area, locale)}</p>
       )}
-      {highlights.length > 0 && (
+      {points.length > 0 && (
         <ul className="entry-points">
-          {highlights.map((h, i) => (
-            <li key={i} data-edit={`highlights::${item.id}::${i}`}>{L(h, locale)}</li>
+          {points.map((p) => (
+            <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>
           ))}
         </ul>
       )}
@@ -366,7 +381,9 @@ function renderSidebarBody(section: Section, locale: Locale) {
     case 'skills':
       return <SkillTable items={section.items as SkillItem[]} locale={locale} />
     default:
-      return <FallbackList section={section} locale={locale} />
+      // work/education/projects/workflow 等放侧栏时回退主栏渲染器（Entry/ProjectCard 等），
+      // 否则 FallbackList 的 Object.entries 拼接会丢 highlights/嵌套字段。
+      return renderMainBody(section, locale)
   }
 }
 
