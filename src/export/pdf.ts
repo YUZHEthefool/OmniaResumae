@@ -261,6 +261,13 @@ export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
     })
     .join('\n')
 
+  // 克隆并剥离编辑模式残留：根的虚线 outline、根及 [data-edit] 子节点的 contenteditable，
+  // 否则会随 outerHTML 序列化进打印文档（exportPDF/exportImage 也做了同样剥离）。
+  const clone = node.cloneNode(true) as HTMLElement
+  clone.style.outline = 'none'
+  clone.removeAttribute('contenteditable')
+  clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
+
   win.document.write(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8">
     <title>${slugify(pick(resume.basics.name, locale, 'resume'))}_${locale}</title>
     ${styles}
@@ -269,7 +276,7 @@ export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
       html,body{margin:0;padding:0;background:#fff;}
       .print-wrap{display:flex;justify-content:center;}
     </style>
-  </head><body><div class="print-wrap">${node.outerHTML}</div>
+  </head><body><div class="print-wrap">${clone.outerHTML}</div>
   <script>window.onload=function(){setTimeout(function(){window.focus();window.print();},300);};</script>
   </body></html>`)
   win.document.close()
