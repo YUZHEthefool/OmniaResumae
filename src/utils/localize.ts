@@ -16,3 +16,14 @@ export function isEmptyLocalized(v?: Localized): boolean {
 export function cloneLocalized(v?: Localized): Localized {
   return { zh: v?.zh ?? '', en: v?.en ?? '' }
 }
+
+/** 日期范围：'present'/'至今' 按语种本地化；空 endDate 保持空（schema 约定至今留空，渲染时只显示开始日期）。 */
+export function fmtDateRange(start?: string, end?: string, locale: Locale = 'zh'): string {
+  const norm = (d?: string) => {
+    if (!d) return ''
+    const t = d.trim()
+    if (/^(present|至今)$/i.test(t)) return locale === 'zh' ? '至今' : 'Present'
+    return d
+  }
+  return [norm(start), norm(end)].filter(Boolean).join(' — ')
+}
