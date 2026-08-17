@@ -236,3 +236,7 @@
 .export-single .tpl-mag .entry { margin-bottom: 8px; }
 .export-single .tpl-mag .project { margin-bottom: 8px; }
 .export-single .tpl-mag .section { margin-bottom: 11px; }
+/* 单页合并 main+side 为等宽双栏：取消 1.4fr/1fr 两栏 grid，整块拆两列。mast/lead/colophon 在 .grid 外，不被拆。
+   entry/project/side-block 已有 page-break-inside:avoid；每栏 ~355px。 */
+.export-single .tpl-mag .grid { display: block; column-count: 2; column-gap: 22px; }
+.export-single .tpl-mag .sec-title { break-after: avoid; }

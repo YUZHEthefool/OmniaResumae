@@ -286,3 +286,7 @@
 .export-single .tpl-serif .entry { margin-bottom: 7px; }
 .export-single .tpl-serif .project { margin-bottom: 7px; }
 .export-single .tpl-serif .section { margin-bottom: 11px; }
+/* 单页合并 main+side 为等宽双栏：取消两栏 grid，整块拆两列。header 在 .grid 外，天生不被拆。
+   entry/project/side-block 已有 page-break-inside:avoid；每栏 ~355px，字号大、留白少。 */
+.export-single .tpl-serif .grid { display: block; column-count: 2; column-gap: 22px; }
+.export-single .tpl-serif .sec-title { break-after: avoid; }
