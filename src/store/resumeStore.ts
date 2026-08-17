@@ -27,6 +27,10 @@ let pendingDraft: Resume | null = null
 let savePromise: Promise<void> = Promise.resolve()
 // 撤销检查点节流：距上次编辑 >1s 视为新编辑段，把"改前状态"压栈（避免每次按键都压栈）
 let lastEditMs = 0
+// init 的在途 Promise：React 18 StrictMode（dev）会双调用 effect，裸 `loaded` 守卫在异步
+// resolve 前拦不住第二次调用，导致两调用都看到空 DB、各创建一份示例简历。用一个在途
+// Promise 串行化，确保 init 全过程只跑一次。
+let initPromise: Promise<void> | null = null
 
 /* ─── 跨标签广播（尽力而为；无 BroadcastChannel 时降级为 no-op） ─── */
 let bc: BroadcastChannel | null = null
@@ -114,15 +118,20 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
 
   async init() {
     if (get().loaded) return
-
+    if (initPromise) return initPromise
+    initPromise = (async () => {
     // 跨标签同步监听
     if (bc) {
       bc.onmessage = (ev) => {
         const m = ev.data
         if (!m || typeof m !== 'object') return
         if (m.type === 'saved' && get().current?.id === m.id && !pendingDraft) {
-          // 他标签改了同一简历：重载 current。但本标签若有未落盘草稿则跳过，避免丢本标签编辑
-          db.resumes.get(m.id as string).then((r) => { if (r) set({ current: r }) })
+          // 他标签改了同一简历：重载 current。但本标签若有未落盘草稿则跳过，避免丢本标签编辑。
+          // 注意 get 是异步的：接收消息时无草稿 ≠ set 时仍无草稿——用户若在这个 IDB 读窗口内
+          // 按了一个键，pendingDraft 已置；此时再 set 旧版会覆盖本地编辑致数据丢失。故 .then 内二次校验。
+          db.resumes.get(m.id as string).then((r) => {
+            if (r && !pendingDraft && get().current?.id === m.id) set({ current: r })
+          })
         } else if (m.type === 'list') {
           void get().refreshList()
         }
@@ -159,6 +168,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') void flushSave()
     })
+    })()
+    await initPromise
   },
 
   async refreshList() {
@@ -222,6 +233,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     await get().refreshList()
     if (get().current?.id === id) set({ current: updated })
     notify({ type: 'saved', id })
+    notify({ type: 'list' }) // 改名影响顶栏列表，其它标签需 refreshList 才能看到新名
   },
 
   async duplicate(id) {
@@ -354,7 +366,9 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
   async saveNow() {
     set({ saveStatus: 'saving' })
     await flushSave()
-    set({ saveStatus: 'saved' })
+    // doPut 失败时其 catch 会置 'error' 并吞掉 rejection（savePromise 仍 resolve），故此处不能
+    // 无条件置 'saved'，否则落盘失败仍显示已保存、用户以为成功后关页丢数据。
+    if (useResumeStore.getState().saveStatus !== 'error') set({ saveStatus: 'saved' })
   },
 }))
 
