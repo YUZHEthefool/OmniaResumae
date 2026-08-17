@@ -3,7 +3,7 @@
  * 真实可观测 agent：用户对话 → agent 多轮工具调用实时编辑当前简历 → 编辑器/预览即时更新。
  * 统一处理「从零生成」与「精修当前」。改动实时写 store，每轮可「撤销本轮」回退。
  */
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useMemo } from 'react'
 import { clsx } from 'clsx'
 import { Sparkles, PanelRightClose, Upload, X, Send, Square, Undo2, Plus, Eraser, Wrench, Paperclip, ChevronRight } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
@@ -23,7 +23,8 @@ import type { Skill } from '@/skills/types'
 import type { ChatEntry } from '@/store/chatStore'
 
 let _entrySeq = 0
-const entryId = () => `chat_${++_entrySeq}`
+// 加随机后缀保证跨刷新唯一：持久化的旧条目 id 是 chat_N，新条目 chat_N_xxxx 不冲突
+const entryId = () => `chat_${++_entrySeq}_${Math.random().toString(36).slice(2, 6)}`
 
 export function CopilotPanel() {
   const cfg = useSettingsStore((s) => s.ai)
@@ -31,7 +32,6 @@ export function CopilotPanel() {
   const locale = useUIStore((s) => s.locale)
   const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
   const current = useResumeStore((s) => s.current)
-  const create = useResumeStore((s) => s.create)
   const update = useResumeStore((s) => s.update)
 
   const userSkills = useSkillStore((s) => s.userSkills)
@@ -40,9 +40,11 @@ export function CopilotPanel() {
   const removeSkill = useSkillStore((s) => s.removeSkill)
   const importSkillFromText = useSkillStore((s) => s.importSkillFromText)
 
-  const chatSessions = useChatStore((s) => s.sessions)
-  const setSession = useChatStore((s) => s.setSession)
-  const clearSession = useChatStore((s) => s.clearSession)
+  const conversations = useChatStore((s) => s.conversations)
+  const activeConvId = useChatStore((s) => s.activeConvId)
+  const snapshots = useChatStore((s) => s.snapshots)
+  const deleteConversation = useChatStore((s) => s.deleteConversation)
+  const setActive = useChatStore((s) => s.setActive)
 
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
@@ -52,15 +54,26 @@ export function CopilotPanel() {
   const skillFileRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 对话按简历 id 绑定：切换简历自动加载/保留各自历史
+  // 对话按简历绑定，但每份简历可有多个对话：active 不属本简历时回退到本简历最近对话
   const resumeId = current?.id ?? '__none__'
-  const session = chatSessions[resumeId]
-  const entries = session?.entries ?? []
-  const prevSnapshot = session?.prevSnapshot ?? null
+  const activeConv = activeConvId ? conversations[activeConvId] : null
+  const resumeConvs = useMemo(
+    () => Object.values(conversations).filter((c) => c.resumeId === resumeId).sort((a, b) => b.updatedAt - a.updatedAt),
+    [conversations, resumeId],
+  )
+  const conv = activeConv && activeConv.resumeId === resumeId ? activeConv : resumeConvs[0] ?? null
+  const convId = conv?.id ?? null
+  const entries = conv?.entries ?? []
+  const prevSnapshot = convId ? snapshots[convId] ?? null : null
 
-  // 确保该简历的会话存在：在 effect 内创建，避免 render 期 set 触发 StrictMode 警告
+  // 激活对话跟随简历：切简历时若激活对话不属于本简历，改激活为本简历最近对话（或 null）
   useEffect(() => {
-    if (!useChatStore.getState().sessions[resumeId]) useChatStore.getState().getSession(resumeId)
+    const cur = useChatStore.getState().activeConvId
+    const curConv = cur ? useChatStore.getState().conversations[cur] : null
+    if (!curConv || curConv.resumeId !== resumeId) {
+      const list = useChatStore.getState().listForResume(resumeId)
+      useChatStore.getState().setActive(list[0]?.id ?? null)
+    }
   }, [resumeId])
 
   const builtins = getBuiltins()
@@ -124,8 +137,15 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
   const appendEntry = (e2: ChatEntry) => {
     // 从 store 读最新 entries，避免闭包到 render 期的旧 entries；
     // 否则一轮内多条事件（user→tool_call→tool_result→assistant）会互相覆盖、用户消息丢失。
-    const cur = useChatStore.getState().sessions[resumeId]?.entries ?? []
-    setSession(resumeId, { entries: [...cur, e2] })
+    // 无激活对话时先建一个（技能导入报错等场景也需要落点）。
+    const store = useChatStore.getState()
+    const curActive = store.activeConvId
+    const curConv = curActive ? store.conversations[curActive] : null
+    const id: string = (!curConv || curConv.resumeId !== resumeId)
+      ? store.createConversation(resumeId)
+      : curActive!
+    const cur = useChatStore.getState().conversations[id]?.entries ?? []
+    useChatStore.getState().updateConversation(id, { entries: [...cur, e2] })
   }
 
   const appendEvent = (e: AgentEvent) => {
@@ -149,12 +169,21 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
       appendEntry({ id: entryId(), kind: 'error', message: t('copilotNoKey', locale) })
       return
     }
+    // 确保有对话：首次发送或激活对话不属于本简历时新建
+    const store = useChatStore.getState()
+    let id = store.activeConvId
+    let c = id ? store.conversations[id] : null
+    if (!c || c.resumeId !== resumeId) id = store.createConversation(resumeId)
+    const cid = id!
+    c = useChatStore.getState().conversations[cid]
     appendEntry({ id: entryId(), kind: 'user', text })
     setInput('')
-    // 从 store 取会话消息历史（确保引用持久、跨轮累积；在 handler 内取，不在 render 期创建）
-    const messages = useChatStore.getState().getSession(resumeId).messages
-    messages.push({ role: 'user', content: text })
+    // 首条用户消息作为对话标题
+    if (c && !c.title) useChatStore.getState().renameConversation(cid, text.slice(0, 30))
 
+    // 取消息历史的可变副本：runAgentStream 会 in-place push 多轮，完成后整体落库持久化
+    const messages = [...(c?.messages ?? [])]
+    messages.push({ role: 'user', content: text })
     // 确保/更新 system 首消息
     if (messages.length === 1 || messages[0].role !== 'system') {
       messages.unshift({ role: 'system', content: buildSystemPrompt() })
@@ -162,8 +191,8 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
       messages[0] = { role: 'system', content: buildSystemPrompt() }
     }
 
-    // 本轮快照（撤销用）
-    setSession(resumeId, { prevSnapshot: current ? structuredClone(current) : null })
+    // 本轮快照（撤销用，内存态不持久）
+    useChatStore.getState().setSnapshot(cid, current ? structuredClone(current) : null)
 
     setRunning(true)
     abortRef.current = new AbortController()
@@ -181,6 +210,8 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
       const aborted = (e as Error)?.name === 'AbortError' || !!abortRef.current?.signal.aborted
       if (!aborted) appendEntry({ id: entryId(), kind: 'error', message: (e as Error).message })
     } finally {
+      // 落库持久化消息历史
+      useChatStore.getState().updateConversation(cid, { messages })
       setRunning(false)
       abortRef.current = null
     }
@@ -193,23 +224,22 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
   }
 
   const undoTurn = () => {
-    if (!prevSnapshot) return
+    if (!prevSnapshot || !convId) return
     update((d) => {
       Object.assign(d, structuredClone(prevSnapshot))
     })
-    setSession(resumeId, { prevSnapshot: null })
+    useChatStore.getState().setSnapshot(convId, null)
     appendEntry({ id: entryId(), kind: 'system', text: t('copilotUndoTurn', locale) })
   }
 
-  const newResume = async () => {
-    const newId = await create()
-    // 新简历的会话加一条系统提示
-    setSession(newId, { entries: [{ id: entryId(), kind: 'system', text: t('copilotEmptyNew', locale) }], messages: [], prevSnapshot: null })
+  const newChat = () => {
+    useChatStore.getState().createConversation(resumeId)
     setInput('')
   }
 
-  const clearChat = () => {
-    clearSession(resumeId)
+  const deleteChat = () => {
+    if (!convId) return
+    deleteConversation(convId)
   }
 
   const onInputKey = (e: React.KeyboardEvent) => {
@@ -226,8 +256,6 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
           <Sparkles size={14} className="text-copilot-accent" /> {t('copilot', locale)}
         </h2>
         <div className="flex items-center gap-0.5">
-          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotNewResume', locale)} onClick={newResume} disabled={running}><Plus size={14} /></button>
-          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotClearChat', locale)} onClick={clearChat} disabled={running}><Eraser size={14} /></button>
           {prevSnapshot && !running && (
             <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotUndoTurn', locale)} onClick={undoTurn}><Undo2 size={14} /></button>
           )}
@@ -235,7 +263,26 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
         </div>
       </header>
 
-      <div className="px-3 py-2 border-b border-copilot-border bg-copilot-surface/40">
+      <div className="px-3 py-2 border-b border-copilot-border bg-copilot-surface/40 space-y-2">
+        {/* 对话切换 + 新建/删除（每份简历可有多个对话） */}
+        <div className="flex items-center gap-1">
+          <select
+            className="flex-1 min-w-0 text-xs p-1.5 border border-copilot-border rounded bg-copilot-surface text-copilot-ink focus:outline-none focus:border-copilot-accent transition-colors disabled:opacity-50"
+            value={convId ?? ''}
+            onChange={(e) => setActive(e.target.value || null)}
+            disabled={running}
+          >
+            {resumeConvs.length === 0 && <option value="">{t('copilotNoChat', locale)}</option>}
+            {resumeConvs.map((c) => (
+              <option key={c.id} value={c.id}>{c.title || (locale === 'zh' ? '新对话' : 'New chat')}</option>
+            ))}
+          </select>
+          <button className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotNewChat', locale)} onClick={newChat} disabled={running}><Plus size={14} /></button>
+          {convId && (
+            <button className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded text-copilot-muted hover:text-red-400 hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotDeleteChat', locale)} onClick={deleteChat} disabled={running}><Eraser size={14} /></button>
+          )}
+        </div>
+        {/* skill 选择 */}
         <select
           className="w-full text-xs p-1.5 border border-copilot-border rounded bg-copilot-surface text-copilot-ink focus:outline-none focus:border-copilot-accent transition-colors"
           value={selectedSkillId ?? ''}
