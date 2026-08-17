@@ -6,5 +6,7 @@ export function slugify(s: string): string {
   const kept = trimmed
     .replace(/[^\p{Script=Han}a-zA-Z0-9\s_-]/gu, '')
     .replace(/\s+/g, '_')
+    .slice(0, 80)
+    .replace(/_+$/, '') // 截断后可能留下尾随下划线
   return kept || 'resume'
 }
