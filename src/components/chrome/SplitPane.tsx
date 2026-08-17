@@ -35,13 +35,15 @@ export function SplitPane({
         className="w-1.5 cursor-col-resize bg-chrome-border hover:bg-chrome-ink/40 flex-shrink-0 transition-colors"
         onPointerDown={(e) => {
           dragging.current = true
+          // 拖拽时禁用文本选择，避免鼠标划过左侧表单文字时选中干扰
+          document.body.style.userSelect = 'none'
           ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
         }}
         onPointerMove={(e) => {
           if (dragging.current) onMove(e.clientX)
         }}
-        onPointerUp={() => { dragging.current = false }}
-        onPointerCancel={() => { dragging.current = false }}
+        onPointerUp={() => { dragging.current = false; document.body.style.userSelect = '' }}
+        onPointerCancel={() => { dragging.current = false; document.body.style.userSelect = '' }}
         onDoubleClick={() => setRatio(0.42)}
       />
       <div style={{ width: `${(1 - ratio) * 100}%` }} className="h-full overflow-hidden min-w-[280px]">
