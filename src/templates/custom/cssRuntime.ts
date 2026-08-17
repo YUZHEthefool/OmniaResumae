@@ -40,11 +40,17 @@ function scopeRootFor(id: string): string {
  * 由字体族名拼已知良好的 Google Fonts css2 URL。
  * 族名可含轴信息，如 "Inter:wght@400;700"。
  * 返回 null 表示无字体需加载。
+ *
+ * 注意：css2 的 family= 参数有特殊语法——空格写作 `+`，轴/字重分隔符
+ * `:` `@` `;` `,`（如 Inter:wght@400;700、Roboto:ital,wght@0,400;1,700）
+ * 必须原样保留。用 encodeURIComponent 会把空格变成 %20、把这些结构符
+ * 百分号编码，导致 Google Fonts 解析失败、字体回退到默认。
+ * 故只把空白合并为 +，其余原样保留（字体名按规范只含字母数字与上述结构符）。
  */
 export function buildFontHref(fonts: string[]): string | null {
-  const families = fonts.map((f) => f.trim()).filter(Boolean)
+  const families = fonts.map((f) => f.trim().replace(/\s+/g, '+')).filter(Boolean)
   if (!families.length) return null
-  const params = families.map((f) => `family=${encodeURIComponent(f)}`).join('&')
+  const params = families.map((f) => `family=${f}`).join('&')
   return `https://fonts.googleapis.com/css2?${params}&display=swap`
 }
 
