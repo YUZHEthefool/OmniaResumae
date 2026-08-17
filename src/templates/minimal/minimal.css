@@ -354,3 +354,10 @@
 .export-single .tpl-minimal .entry { margin-bottom: 8px; }
 .export-single .tpl-minimal .project { margin-bottom: 8px; }
 .export-single .tpl-minimal .section { margin-bottom: 13px; }
+/* 单页拆双栏：长简历高度近似砍半 → 接近 A4 比例 → 缩放因子提升、两侧空白减少、字更大。
+   header/keywords 不被拆；entry/project 已有 page-break-inside:avoid（multicol 下当 break-inside:avoid 别名）。
+   不给 .section 加 avoid（长 section 会推下一列留大块空白）。 */
+.export-single .tpl-minimal .page { column-count: 2; column-gap: 24px; }
+.export-single .tpl-minimal .head,
+.export-single .tpl-minimal .keywords { break-inside: avoid; }
+.export-single .tpl-minimal .sec-title { break-after: avoid; }
