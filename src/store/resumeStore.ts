@@ -203,7 +203,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     }
     await deleteResume(id)
     // 清孤儿对话快照（含整份 resume 深拷贝，释放内存）
-    try { useChatStore.getState().clearSession(id) } catch { /* ignore */ }
+    try { useChatStore.getState().deleteForResume(id) } catch { /* ignore */ }
     const list = get().list.filter((e) => e.id !== id)
     let current = get().current
     if (current?.id === id) {
