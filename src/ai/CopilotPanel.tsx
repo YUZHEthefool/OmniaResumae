@@ -13,7 +13,7 @@ import { useSkillStore } from '@/store/skillStore'
 import { useChatStore } from '@/store/chatStore'
 import { getBuiltins } from '@/skills'
 import { runAgentStream, type AgentEvent } from '@/ai/agent'
-import { buildResumeTools } from '@/ai/tools'
+import { buildResumeTools, buildGithubTools } from '@/ai/tools'
 import { extractPdfText } from '@/importers/pdf'
 import { renderMarkdown } from '@/ai/markdown'
 import { OptimizeAction, TailorAction, TranslateAction } from '@/ai/quickActions'
@@ -27,6 +27,7 @@ const entryId = () => `chat_${++_entrySeq}`
 
 export function CopilotPanel() {
   const cfg = useSettingsStore((s) => s.ai)
+  const githubPAT = useSettingsStore((s) => s.githubPAT)
   const locale = useUIStore((s) => s.locale)
   const setCopilotOpen = useUIStore((s) => s.setCopilotOpen)
   const current = useResumeStore((s) => s.current)
@@ -92,6 +93,9 @@ ${isEmpty
 - add_section(type,layout?,title?) / remove_section(section_id) / update_section(...)
 - add_item(section_id,item) / update_item(section_id,item_id,patch) / replace_highlights(section_id,item_id,highlights) / remove_item(...)
 - read_reference(name)：读取本 skill 的补充规则（如有）。
+${githubPAT
+  ? `\n【GitHub 工具（已配置 PAT）】\n- list_my_repos()：列出你的 GitHub 仓库（名称/描述/stars/语言/topics/URL）。据此把真实项目填入 projects 段：name/description/keywords=topics+languages/stars/url=repoUrl/highlights 从 README 提炼。\n- get_repo_detail(owner, repo)：读某仓库的语言/stars/topics/README，精修某条项目。README 可能很长，提炼要点而非照搬。`
+  : `\n【GitHub 工具】未配置 GitHub PAT。若用户想基于真实仓库填充项目，提示去「设置」填 GitHub Personal Access Token（仅需 repo 读权限），即可用 list_my_repos / get_repo_detail。`}
 ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 提到 emit_resume，请忽略，改用上述字段级工具实时编辑。）` : ''}`
   }
 
@@ -166,7 +170,7 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
     try {
       await runAgentStream(cfg, {
         messages,
-        tools: buildResumeTools(locale, selectedSkill),
+        tools: [...buildResumeTools(locale, selectedSkill, current?.id), ...buildGithubTools(githubPAT)],
         maxSteps: 12,
         temperature: 0.45,
         onEvent: appendEvent,
@@ -222,8 +226,8 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
           <Sparkles size={14} className="text-copilot-accent" /> {t('copilot', locale)}
         </h2>
         <div className="flex items-center gap-0.5">
-          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotNewResume', locale)} onClick={newResume}><Plus size={14} /></button>
-          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotClearChat', locale)} onClick={clearChat}><Eraser size={14} /></button>
+          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotNewResume', locale)} onClick={newResume} disabled={running}><Plus size={14} /></button>
+          <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed" title={t('copilotClearChat', locale)} onClick={clearChat} disabled={running}><Eraser size={14} /></button>
           {prevSnapshot && !running && (
             <button className="w-6 h-6 flex items-center justify-center rounded text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface transition-colors" title={t('copilotUndoTurn', locale)} onClick={undoTurn}><Undo2 size={14} /></button>
           )}
