@@ -18,7 +18,7 @@ import { structureViaAI } from '@/ai/aiStructure'
 
 type Source = 'markdown' | 'latex' | 'pdf' | 'paste' | 'json'
 
-export function ImportDialog({ onClose }: { onClose: () => void }) {
+export function ImportDialog({ initialFile, onClose }: { initialFile?: File | null; onClose: () => void }) {
   const [source, setSource] = useState<Source>('markdown')
   const [raw, setRaw] = useState('')
   const [frag, setFrag] = useState<ImportFragment | null>(null)
@@ -30,26 +30,26 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const locale = useUIStore((s) => s.locale)
 
-  const handleFile = async (f: File) => {
+  const handleFile = async (f: File, src: Source) => {
     setBusy(true); setErr(''); setInfo('')
     try {
       // 文件大小上限：防超大 PDF/文件撑爆内存卡死页
-      const limit = source === 'pdf' ? 25 * 1024 * 1024 : 5 * 1024 * 1024
+      const limit = src === 'pdf' ? 25 * 1024 * 1024 : 5 * 1024 * 1024
       if (f.size > limit) {
         setErr(`文件过大（${(f.size / 1024 / 1024).toFixed(1)}MB），上限 ${limit / 1024 / 1024}MB`)
         return
       }
-      if (source === 'markdown') {
+      if (src === 'markdown') {
         const txt = await f.text()
         setRaw(txt)
         setFrag(parseMarkdownToFragment(txt))
         setAIResume(null)
-      } else if (source === 'latex') {
+      } else if (src === 'latex') {
         const txt = await f.text()
         setRaw(txt)
         setFrag(parseLatexToFragment(txt))
         setAIResume(null)
-      } else if (source === 'json') {
+      } else if (src === 'json') {
         // JSON：本工具导出格式的完整 Resume，直接结构化（走 aiResume 合并路径）
         const text = await f.text()
         setRaw(text)
@@ -57,7 +57,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
         setAIResume(r)
         setFrag(null)
         setInfo('✓ 已解析 JSON 简历')
-      } else if (source === 'pdf') {
+      } else if (src === 'pdf') {
         // PDF：只提取原文，结构化交给 AI（主路径）。启发式仅作无 key 时兜底。
         const txt = await extractPdfText(f)
         if (!txt.trim()) {
@@ -89,6 +89,17 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
       setBusy(false)
     }
   }
+
+  // 拖拽带入的文件：按扩展名选 source 并自动加载，消费后清空 uiStore.importFile
+  useEffect(() => {
+    if (!initialFile) return
+    const name = initialFile.name.toLowerCase()
+    const src: Source = name.endsWith('.pdf') ? 'pdf' : name.endsWith('.tex') ? 'latex' : name.endsWith('.json') ? 'json' : 'markdown'
+    setSource(src)
+    void handleFile(initialFile, src)
+    useUIStore.getState().setImportFile(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const runPaste = () => {
     setErr('')
@@ -213,7 +224,7 @@ export function ImportDialog({ onClose }: { onClose: () => void }) {
                 type="file"
                 accept={source === 'pdf' ? '.pdf' : source === 'latex' ? '.tex' : source === 'json' ? '.json' : '.md,.markdown,.txt'}
                 className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f) }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f, source) }}
               />
               <button
                 className="px-3 py-2 text-sm border border-chrome-border rounded hover:bg-chrome-bg"
