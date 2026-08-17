@@ -1,7 +1,7 @@
 /**
  * Magazine / Editorial 模板 — Playfair 大标题、分栏、强调色
  */
-import type { FC } from 'react'
+import type { FC, ReactNode } from 'react'
 import type {
   Locale, Section,
   WorkItem, EducationItem, ProjectItem, SkillItem,
@@ -9,6 +9,7 @@ import type {
   WorkflowStep, CommunityItem,
 } from '@/types/resume'
 import { pick } from '@/types/resume'
+import { fmtDateRange } from '@/utils/localize'
 import { registerTemplate, type TemplateProps, type TemplateMeta } from '../registry'
 import './magazine.css'
 
@@ -49,6 +50,9 @@ const MagazineTemplate: FC<TemplateProps> = ({ resume, locale }) => {
             {resume.basics.phone && <span>{resume.basics.phone}</span>}
             {resume.basics.url && <a href={resume.basics.url}>{resume.basics.url.replace(/^https?:\/\//, '')}</a>}
             {L(resume.basics.location, locale) && <span>{L(resume.basics.location, locale)}</span>}
+            {(resume.basics.profiles ?? []).map((p) => (
+              <a key={p.url} href={p.url} target="_blank" rel="noreferrer">{p.network}</a>
+            ))}
           </div>
         </header>
 
@@ -66,7 +70,7 @@ const MagazineTemplate: FC<TemplateProps> = ({ resume, locale }) => {
             {/* 基本信息 */}
             <div className="side-block">
               <div className="side-title">{locale === 'zh' ? '基本信息' : 'Basics'}</div>
-              <div className="info-row"><span className="info-k">{locale === 'zh' ? '岗位' : 'Role'}</span><span className="info-v">{L(resume.basics.label, locale)}</span></div>
+              {L(resume.basics.label, locale) && <div className="info-row"><span className="info-k">{locale === 'zh' ? '岗位' : 'Role'}</span><span className="info-v">{L(resume.basics.label, locale)}</span></div>}
               {L(resume.basics.location, locale) && <div className="info-row"><span className="info-k">{locale === 'zh' ? '城市' : 'City'}</span><span className="info-v">{L(resume.basics.location, locale)}</span></div>}
               {resume.basics.email && <div className="info-row"><span className="info-k">Email</span><span className="info-v">{resume.basics.email}</span></div>}
               {resume.basics.phone && <div className="info-row"><span className="info-k">{locale === 'zh' ? '电话' : 'Tel'}</span><span className="info-v">{resume.basics.phone}</span></div>}
@@ -93,7 +97,7 @@ function SectionView({ section, locale }: { section: Section; locale: Locale }) 
   )
 }
 
-function renderMain(section: Section, locale: Locale) {
+function renderMain(section: Section, locale: Locale): ReactNode {
   switch (section.type) {
     case 'work': return <>{(section.items as WorkItem[]).map((w) => <Entry key={w.id} item={w} locale={locale} />)}</>
     case 'education': return <>{(section.items as EducationItem[]).map((e) => <Entry key={e.id} item={e} locale={locale} edu />)}</>
@@ -118,13 +122,13 @@ function renderMain(section: Section, locale: Locale) {
         <div className="award-meta">{[L(a.awarder, locale), a.date].filter(Boolean).join(' · ')}</div>
       </div>
     ))}</>
-    default: return <div className="empty">—</div>
+    default: return renderSide(section, locale) // matches/domains/publications/community 放主栏时回退侧栏渲染器，避免内容被吞
   }
 }
 
 function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: Locale; edu?: boolean }) {
   const w = item as WorkItem; const e = item as EducationItem
-  const date = [item.startDate, item.endDate].filter(Boolean).join(' — ')
+  const date = fmtDateRange(item.startDate, item.endDate, locale)
   const points = (item.highlights ?? []).filter((h) => L(h, locale))
   return (
     <div className="entry">
@@ -169,7 +173,7 @@ function SideSection({ section, locale }: { section: Section; locale: Locale }) 
   )
 }
 
-function renderSide(section: Section, locale: Locale) {
+function renderSide(section: Section, locale: Locale): ReactNode {
   switch (section.type) {
     case 'matches':
       if (!(section.items as MatchItem[]).length) return <div className="empty">—</div>
@@ -219,8 +223,8 @@ function renderSide(section: Section, locale: Locale) {
         </div>
       ))}</>
     default:
-      // work/education/projects/workflow 等被放到侧栏时，回退到主栏渲染，避免内容被吞
-      return renderMain(section, locale)
+      // work/education/projects/workflow 放侧栏时回退主栏渲染；custom 两边均不处理，终止以防 renderMain↔renderSide 互递归
+      return section.type === 'custom' ? <div className="empty">—</div> : renderMain(section, locale)
   }
 }
 
