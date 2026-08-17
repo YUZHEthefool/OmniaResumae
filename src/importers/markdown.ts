@@ -103,9 +103,10 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
           last.url = linkMatch[1].startsWith('http') ? linkMatch[1] : 'https://' + linkMatch[1]
           if (raw.replace(linkMatch[0], '').trim().length < 12) continue
         }
-        // 描述段落 → 最近条目的 description
+        // 描述段落 → 最近条目的 description（多条段落用 \n 累积，旧实现展开 localize 覆盖同语种槽，仅保留最后一段）
         if (last.highlights && Array.isArray(last.highlights)) {
-          last.description = { ...(last.description ?? {}), ...localize(text, langHint) }
+          const prev = (last.description as Localized | undefined)?.[langHint] ?? ''
+          last.description = { ...(last.description ?? {}), [langHint]: prev ? `${prev}\n${text}` : text }
           continue
         }
       }
