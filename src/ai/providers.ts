@@ -72,8 +72,9 @@ export async function chatWithTools(
   tools: ToolSpec[],
   temperature = 0.4,
   signal?: AbortSignal,
+  maxTokens?: number,
 ): Promise<ToolCallResult> {
-  if (config.kind === 'anthropic') return chatWithToolsAnthropic(config, messages, tools, temperature, signal)
+  if (config.kind === 'anthropic') return chatWithToolsAnthropic(config, messages, tools, temperature, signal, maxTokens)
   return chatWithToolsOpenAI(config, messages, tools, temperature, signal)
 }
 
@@ -127,12 +128,14 @@ async function chatWithToolsAnthropic(
   tools: ToolSpec[],
   temperature: number,
   signal?: AbortSignal,
+  maxTokens?: number,
 ): Promise<ToolCallResult> {
   const { system, msgs } = toAnthropicMessages(messages)
   const body: Record<string, unknown> = {
     model: config.model,
-    // emit_resume 等工具参数可能很大（完整简历 JSON），4096 会截断 tool_use input
-    max_tokens: 8192,
+    // emit_resume 等工具参数可能很大（完整简历 JSON），默认 8192 会截断 tool_use input；
+    // 调用方（generateWithSkill）可经 maxTokens 提到 16000。OpenAI 兼容端点用各自默认，不设 max_tokens。
+    max_tokens: maxTokens ?? 8192,
     temperature,
     system,
     messages: msgs,
