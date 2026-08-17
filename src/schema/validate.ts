@@ -53,7 +53,7 @@ export const EducationItemSchema = z.object({
   endDate: z.string().optional(),
   gpa: z.string().optional(),
   courses: z.array(LocalizedSchema).optional(),
-  highlights: z.array(LocalizedSchema).optional(),
+  highlights: z.array(LocalizedSchema).default([]),
 })
 
 export const ProjectItemSchema = z.object({
