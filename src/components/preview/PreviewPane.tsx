@@ -18,6 +18,8 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
   const zoom = useUIStore((s) => s.zoom)
   const update = useResumeStore((s) => s.update)
   const [editing, setEditing] = useState(false)
+  const [showPages, setShowPages] = useState(false)
+  const [guide, setGuide] = useState<{ h: number; count: number }>({ h: 0, count: 0 })
 
   const Template = useMemo(() => getTemplate(templateId) ?? getTemplate('serif-classic'), [templateId])
 
@@ -61,32 +63,67 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
     }
   }, [editing, resume, update, locale, ref])
 
+  // A4 分页参考线：以预览内容宽度为 A4 宽，按 A4 高/宽比（1123/794）算每页高度，
+  // 在内容上叠加虚线标记多页 PDF 会在哪里切断。随 zoom 缩放（线在 scaled 容器内）。
+  useEffect(() => {
+    const el = (ref as unknown as React.RefObject<HTMLDivElement | null> | null)?.current ?? null
+    if (!el || !showPages) { setGuide({ h: 0, count: 0 }); return }
+    const compute = () => {
+      const w = el.clientWidth || 960
+      const pageH = Math.round((w * 1123) / 794)
+      const count = Math.max(0, Math.ceil(el.scrollHeight / pageH) - 1)
+      setGuide({ h: pageH, count })
+    }
+    const ro = new ResizeObserver(compute)
+    ro.observe(el)
+    compute()
+    return () => ro.disconnect()
+  }, [showPages, resume, templateId, locale, ref])
+
   return (
     <div className="h-full flex flex-col bg-chrome-bg">
       {/* 预览工具栏 */}
       <div className="flex items-center justify-end gap-2 px-4 py-1.5 border-b border-chrome-border bg-chrome-panel">
         <button
           type="button"
+          onClick={() => setShowPages((v) => !v)}
+          className={`px-2.5 py-1 text-xs rounded border ${
+            showPages ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
+          }`}
+          title={t('pageGuideTitle', locale)}
+        >
+          {t('pageGuide', locale)}
+        </button>
+        {/* 编辑预览：仅 Brutalist 模板输出 data-edit 钩子，其它模板点击无反应，故仅在该模板下显示按钮 */}
+        {templateId === 'brutalist' && (
+        <button
+          type="button"
           onClick={() => setEditing((v) => !v)}
           className={`px-2.5 py-1 text-xs rounded border ${
             editing ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
           }`}
-          title="开启后可直接点击预览中的文本编辑"
+          title={t('editPreviewTitle', locale)}
         >
-          {editing ? '✏ 编辑中（点完成）' : '✏ 编辑预览'}
+          {editing ? t('editPreviewDone', locale) : t('editPreview', locale)}
         </button>
+        )}
       </div>
       <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto" style={{ width: '960px', transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
           <div
             ref={ref}
-            style={{ outline: editing ? '1px dashed #999' : 'none' }}
+            style={{ outline: editing ? '1px dashed #999' : 'none', position: 'relative' }}
           >
             {resume && Template ? (
               <Template.Component resume={resume} locale={locale} />
             ) : (
               <div className="text-chrome-muted text-sm">{t('emptyHint', locale as Locale)}</div>
             )}
+            {showPages && guide.h > 0 && Array.from({ length: guide.count }, (_, i) => (
+              <div key={`pg${i}`} style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * guide.h, borderTop: '1px dashed #f59e0b', zIndex: 5, pointerEvents: 'none' }}>
+                <span style={{ position: 'absolute', right: 0, top: -13, fontSize: 10, color: '#f59e0b', background: 'rgba(255,255,255,.85)', padding: '0 4px', borderRadius: 2 }}>A4 · p{i + 2}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
