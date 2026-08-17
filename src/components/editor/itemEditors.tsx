@@ -220,6 +220,11 @@ export function DomainEditor({ item, update }: { item: DomainItem; update: Updat
   return (
     <div className="grid grid-cols-2 gap-2">
       <div className="col-span-2">
+        <Field label={locale === 'zh' ? '图标' : 'Icon'}>
+          <TextInput value={item.icon} onChange={(v) => update({ icon: v })} placeholder="🌱" />
+        </Field>
+      </div>
+      <div className="col-span-2">
         <Field label={t('fldDomainName', locale)}>
           <LocalizedInput value={item.name} onChange={(v) => update({ name: v })} />
         </Field>
