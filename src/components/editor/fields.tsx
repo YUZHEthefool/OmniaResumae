@@ -161,7 +161,7 @@ export function TagsInput({
           if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault()
             const raw = (e.target as HTMLInputElement).value.trim()
-            if (raw) {
+            if (raw && !value.includes(raw)) {
               onChange([...value, raw])
               ;(e.target as HTMLInputElement).value = ''
             }
@@ -170,7 +170,7 @@ export function TagsInput({
         onBlur={(e) => {
           // 失焦时把未按回车的文字也提交，避免输入到一半点别处丢失
           const raw = e.currentTarget.value.trim()
-          if (raw) { onChange([...value, raw]); e.currentTarget.value = '' }
+          if (raw && !value.includes(raw)) { onChange([...value, raw]); e.currentTarget.value = '' }
         }}
       />
     </div>
