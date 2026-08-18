@@ -427,6 +427,11 @@ function sanitizeResume(r: Resume): Resume {
             it.highlights = []
             changed = true
           }
+          // keywords/languages/courses 运行时按数组用（模板 .join/.map、导出 .map）；旧 AI 产出可能
+          // 是逗号字符串，致 (... ?? []).join() 对字符串求值不回退 → TypeError 崩全应用。兜底成数组。
+          for (const f of ['keywords', 'languages', 'courses'] as const) {
+            if (f in it && !Array.isArray(it[f])) { it[f] = []; changed = true }
+          }
           for (const k of Object.keys(it)) {
             const v = it[k]
             if (v && typeof v === 'object' && ('zh' in v || 'en' in v)) {

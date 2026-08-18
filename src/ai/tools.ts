@@ -147,6 +147,7 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
           if (keywords) {
             // 按当前语种值匹配旧条目以保留另一语言（模型重排序也不会把中英文交叉配错）；
             // 模型若直接给完整 {zh,en} 对象则原样采用。旧实现按索引合并，重排序会交叉。
+            if (!Array.isArray(keywords)) return 'ok: meta keywords 非数组,已忽略'
             const prev = d.meta.keywords ?? []
             d.meta.keywords = (keywords as unknown[]).map((k): Localized => {
               if (isLocalized(k)) return { zh: k.zh, en: k.en }
@@ -300,6 +301,10 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
               else if (typeof v === 'string') it[k] = mergeLoc(it[k] as Localized | undefined, { [locale]: v } as Localized)
             } else if (k === 'highlights') {
               it[k] = coerceHighlights(v, locale, (it[k] as Localized[]) ?? [])
+            } else if (k === 'keywords' || k === 'languages' || k === 'courses') {
+              // 这三字段运行时按数组用（模板 .join/.map）；模型若误传逗号字符串会原样写入致
+              // (... ?? []).join() 对字符串求值不回退 → TypeError 崩全应用。兜底成数组（同 coerceItem）。
+              it[k] = Array.isArray(v) ? v : []
             } else {
               it[k] = v
             }
