@@ -148,20 +148,6 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
     useChatStore.getState().updateConversation(id, { entries: [...cur, e2] })
   }
 
-  const appendEvent = (e: AgentEvent) => {
-    if (e.type === 'assistant') {
-      if (!e.content && !e.reasoningContent) return
-      appendEntry({ id: entryId(), kind: 'assistant', text: e.content, reasoning: e.reasoningContent })
-    } else if (e.type === 'tool_call') {
-      appendEntry({ id: entryId(), kind: 'tool_call', name: e.call.name, args: e.call.args })
-    } else if (e.type === 'tool_result') {
-      appendEntry({ id: entryId(), kind: 'tool_result', name: e.name, result: e.result })
-    } else if (e.type === 'error') {
-      appendEntry({ id: entryId(), kind: 'error', message: e.message })
-    }
-    // done 事件已在 assistant 渲染过，不重复
-  }
-
   const send = async () => {
     const text = input.trim()
     if (!text || running) return
@@ -176,7 +162,27 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
     if (!c || c.resumeId !== resumeId) id = store.createConversation(resumeId)
     const cid = id!
     c = useChatStore.getState().conversations[cid]
-    appendEntry({ id: entryId(), kind: 'user', text })
+    // 本轮事件一律写入固定 cid（闭包捕获），不读实时 activeConvId——否则运行中切简历会
+    // 让 useEffect 改 activeConvId，事件 entries 回写到新简历会话、而 messages 落到原 cid，
+    // entries/messages 分裂到两个会话。原 appendEntry（读实时 active）保留给非 send 路径
+    //（skill/attach 报错、stop、undoTurn），那些不在运行中，读实时 active 安全。
+    const appendEntryForRun = (e2: ChatEntry) => {
+      const cur = useChatStore.getState().conversations[cid]?.entries ?? []
+      useChatStore.getState().updateConversation(cid, { entries: [...cur, e2] })
+    }
+    const appendEventForRun = (e: AgentEvent) => {
+      if (e.type === 'assistant') {
+        if (!e.content && !e.reasoningContent) return
+        appendEntryForRun({ id: entryId(), kind: 'assistant', text: e.content, reasoning: e.reasoningContent })
+      } else if (e.type === 'tool_call') {
+        appendEntryForRun({ id: entryId(), kind: 'tool_call', name: e.call.name, args: e.call.args })
+      } else if (e.type === 'tool_result') {
+        appendEntryForRun({ id: entryId(), kind: 'tool_result', name: e.name, result: e.result })
+      } else if (e.type === 'error') {
+        appendEntryForRun({ id: entryId(), kind: 'error', message: e.message })
+      }
+    }
+    appendEntryForRun({ id: entryId(), kind: 'user', text })
     setInput('')
     // 首条用户消息作为对话标题
     if (c && !c.title) useChatStore.getState().renameConversation(cid, text.slice(0, 30))
@@ -202,13 +208,13 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
         tools: [...buildResumeTools(locale, selectedSkill, current?.id), ...buildGithubTools(githubPAT)],
         maxSteps: 12,
         temperature: 0.45,
-        onEvent: appendEvent,
+        onEvent: appendEventForRun,
         signal: abortRef.current.signal,
       })
     } catch (e) {
       // Stop 触发的 AbortError 不再追加红色错误条目（stop() 已加"已停止"，避免重复误报）
       const aborted = (e as Error)?.name === 'AbortError' || !!abortRef.current?.signal.aborted
-      if (!aborted) appendEntry({ id: entryId(), kind: 'error', message: (e as Error).message })
+      if (!aborted) appendEntryForRun({ id: entryId(), kind: 'error', message: (e as Error).message })
     } finally {
       // 落库持久化消息历史
       useChatStore.getState().updateConversation(cid, { messages })
@@ -240,6 +246,10 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
   const deleteChat = () => {
     if (!convId) return
     deleteConversation(convId)
+    // 删除激活会话后 store.activeConvId 置 null，但 UI 派生 conv 会回退到 resumeConvs[0]，
+    // 若不重设 active，下次 send 读 store.activeConvId(null) 会建新会话、丢失 UI 显示的那个会话上下文。
+    // 重设为剩余同简历会话（或 null），使 store 与 UI 一致。
+    setActive(useChatStore.getState().listForResume(resumeId)[0]?.id ?? null)
   }
 
   const onInputKey = (e: React.KeyboardEvent) => {
