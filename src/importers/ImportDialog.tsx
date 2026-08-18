@@ -146,9 +146,18 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
         // AI/JSON 结构化：整份覆盖或追加
         if (mode === 'replace') {
           // 保留 AI/JSON 产物无法承载的字段：profiles / image / nameRomanized，
-          // 以及未被覆盖的现有段（matches/domains/workflow/community 等扩展段 AI 罕见产出）
+          // 以及未被覆盖的现有段（matches/domains/workflow/community 等扩展段 AI 罕见产出）。
+          // 注意：aiResume.basics 的可选字段经 normalizeToResume 会显式为 undefined（key 存在），
+          // 直接 spread 会用 undefined 覆盖用户已有值——故 label/email/phone/url/location/summary
+          // 也必须显式 ?? 回填，否则导入没写这些字段的备份/AI 会静默擦除用户邮箱/电话/头衔。
           d.basics = {
             ...aiResume.basics,
+            label: aiResume.basics.label ?? d.basics.label,
+            email: aiResume.basics.email ?? d.basics.email,
+            phone: aiResume.basics.phone ?? d.basics.phone,
+            url: aiResume.basics.url ?? d.basics.url,
+            location: aiResume.basics.location ?? d.basics.location,
+            summary: aiResume.basics.summary ?? d.basics.summary,
             profiles: aiResume.basics.profiles ?? d.basics.profiles,
             image: aiResume.basics.image ?? d.basics.image,
             nameRomanized: aiResume.basics.nameRomanized ?? d.basics.nameRomanized,
