@@ -127,8 +127,8 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     const imgH = (canvas.height * imgW) / canvas.width
     const step = pageH - 6
     let pages = Math.max(1, Math.ceil((imgH - 6) / step))
-    // 末页近空白（<24pt）则裁掉，避免多出一页几乎全白的尾页
-    if (pages > 1 && Math.min(pageH, imgH - (pages - 1) * step) < 24) pages -= 1
+    // 旧版"末页 <24pt 则裁掉"会在 imgH 仅略超 pageH 时丢内容（底部 0-18pt 被静默丢弃）。
+    // 近空白的尾页优于丢内容——不再裁，保留细长末页。
     for (let pageIndex = 0; pageIndex < pages; pageIndex++) {
       if (pageIndex > 0) pdf.addPage()
       const position = pageIndex * step
@@ -154,8 +154,9 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     const contentRatioPx = canvas.width / canvas.height // 约等于 designW / 内容高
     const a4Ratio = pageW / pageH
     let imgW: number, imgH: number
+    let didScale = false // 是否真的因内容高于 A4 而整体微缩（仅此情形才该警告"内容较长"）
     if (contentRatioPx >= a4Ratio) {
-      // 内容比 A4 更"宽矮"（少见）：按宽铺满，高度不足则垂直居中
+      // 内容比 A4 更"宽矮"（少见）：按宽铺满，高度不足则垂直居中（未缩小，不该警告）
       imgW = pageW
       imgH = (canvas.height * imgW) / canvas.width
     } else {
@@ -166,6 +167,7 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
       if (imgH > pageH) {
         imgH = pageH
         imgW = (canvas.width * imgH) / canvas.height
+        didScale = true
       }
     }
     const x = (pageW - imgW) / 2
@@ -174,11 +176,12 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
     pdf.rect(0, 0, pageW, pageH, 'F')
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, imgW, imgH)
 
-    // 长简历反馈：缩放因子 < 80%（内容 > 1.25 页）时附提示，让用户知情并建议多页
+    // 长简历反馈：仅当真正整体微缩且缩放因子 < 80%（内容 > 1.25 页）时附提示。
+    // 旧版对短内容/双栏内容（contentRatioPx>=a4Ratio 分支未缩小）也误报"内容较长"。
     const scalePct = Math.round(Math.min(imgW / pageW, imgH / pageH) * 100)
-    if (scalePct < 80) {
+    if (didScale && scalePct < 80) {
       const naturalH = (canvas.height * pageW) / canvas.width // 按 A4 宽铺满时的高度(pt)
-      const pages = Math.max(2, Math.ceil(naturalH / pageH))
+      const pages = Math.max(1, Math.ceil(naturalH / pageH))
       warn = t('singlePdfWarn', locale).replace('{n}', String(pages)).replace('{pct}', String(scalePct))
     }
   }
