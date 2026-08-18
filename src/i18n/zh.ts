@@ -234,6 +234,19 @@ export const zh = {
   hcWarn: '警告',
   hcInfo: '提示',
   hcNoIssues: '暂无问题，简历已较完整',
+
+  // JD 关键词匹配度（CopilotPanel quickMode）
+  quickJdMatch: 'JD 匹配',
+  jdPaste: '贴岗位描述（JD）',
+  jdAnalyze: '分析匹配',
+  jdScore: '匹配度',
+  jdMatched: '命中关键词',
+  jdMissing: '缺失关键词',
+  jdAddKeywords: '把缺失词加入 meta.keywords',
+  jdNoKey: '请先在「设置」中配置 AI 密钥',
+  jdAnalyzing: 'AI 分析中…',
+  jdErr: '分析失败：',
+  jdAdded: '已加入 {n} 个关键词',
 }
 
 export type Dict = typeof zh

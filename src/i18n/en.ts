@@ -232,4 +232,17 @@ export const en: Dict = {
   hcWarn: 'Warning',
   hcInfo: 'Info',
   hcNoIssues: 'No issues — resume looks complete',
+
+  // JD keyword match (CopilotPanel quickMode)
+  quickJdMatch: 'JD Match',
+  jdPaste: 'Paste the job description (JD)',
+  jdAnalyze: 'Analyze match',
+  jdScore: 'Match score',
+  jdMatched: 'Matched keywords',
+  jdMissing: 'Missing keywords',
+  jdAddKeywords: 'Add missing words to meta.keywords',
+  jdNoKey: 'Please configure an AI key in Settings first',
+  jdAnalyzing: 'AI analyzing…',
+  jdErr: 'Analysis failed: ',
+  jdAdded: 'Added {n} keywords',
 }

@@ -116,3 +116,15 @@ export interface OptimizeProposal {
 export interface TranslateProposal {
   pairs: { source: string; target: string }[]
 }
+
+/** JD 关键词匹配提案：贴 JD → AI 提取关键词 → 与简历对比 → 匹配度 + 命中/缺失 */
+export interface JDProposal {
+  /** AI 从 JD 提取的全部关键词（技术栈/具体技能） */
+  keywords: string[]
+  /** 简历已命中的关键词 */
+  matched: string[]
+  /** 简历缺失的关键词 */
+  missing: string[]
+  /** 匹配百分比 0-100 */
+  score: number
+}

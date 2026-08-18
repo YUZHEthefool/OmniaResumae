@@ -17,6 +17,7 @@ import { buildResumeTools, buildGithubTools } from '@/ai/tools'
 import { extractPdfText } from '@/importers/pdf'
 import { renderMarkdown } from '@/ai/markdown'
 import { OptimizeAction, TailorAction, TranslateAction } from '@/ai/quickActions'
+import { JDMatchAction } from '@/ai/JDMatchAction'
 import { t } from '@/i18n'
 import { pick } from '@/types/resume'
 import type { Skill } from '@/skills/types'
@@ -48,7 +49,7 @@ export function CopilotPanel() {
 
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
-  const [quickMode, setQuickMode] = useState<null | 'optimize' | 'tailor' | 'translate'>(null)
+  const [quickMode, setQuickMode] = useState<null | 'optimize' | 'tailor' | 'translate' | 'jdmatch'>(null)
   const abortRef = useRef<AbortController | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const skillFileRef = useRef<HTMLInputElement>(null)
@@ -327,16 +328,16 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
       {/* 快捷动作：优化润色 / 目标包装 / 翻译（提案-逐条采纳） */}
       <div className="px-3 py-1.5 border-b border-copilot-border flex items-center gap-1">
         <span className="text-[10px] text-copilot-dim mr-0.5">{t('quickActions', locale)}</span>
-        {(['optimize', 'tailor', 'translate'] as const).map((m) => (
+        {(['optimize', 'tailor', 'translate', 'jdmatch'] as const).map((m) => (
           <button
             key={m}
             className={clsx(
-              'flex-1 px-1.5 py-1 text-[11px] rounded transition-colors',
+              'flex-1 px-1 py-1 text-[10px] whitespace-nowrap rounded transition-colors',
               quickMode === m ? 'bg-copilot-accent text-white' : 'text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface',
             )}
             onClick={() => setQuickMode(quickMode === m ? null : m)}
           >
-            {m === 'optimize' ? t('quickOptimize', locale) : m === 'tailor' ? t('quickTailor', locale) : t('quickTranslate', locale)}
+            {m === 'optimize' ? t('quickOptimize', locale) : m === 'tailor' ? t('quickTailor', locale) : m === 'translate' ? t('quickTranslate', locale) : t('quickJdMatch', locale)}
           </button>
         ))}
       </div>
@@ -353,6 +354,7 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
             {quickMode === 'optimize' && <OptimizeAction />}
             {quickMode === 'tailor' && <TailorAction />}
             {quickMode === 'translate' && <TranslateAction />}
+            {quickMode === 'jdmatch' && <JDMatchAction />}
           </div>
         ) : (
           <>

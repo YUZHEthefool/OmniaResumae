@@ -171,6 +171,13 @@ export const TranslateProposalSchema = z.object({
   pairs: z.array(z.object({ source: z.string(), target: z.string() })).default([]),
 })
 
+export const JDProposalSchema = z.object({
+  keywords: z.array(z.string()).default([]),
+  matched: z.array(z.string()).default([]),
+  missing: z.array(z.string()).default([]),
+  score: z.number().min(0).max(100).default(0),
+})
+
 /* ───────── AI 生成模板校验（模板工坊） ───────── */
 export const GeneratedTemplateSchema = z.object({
   name: z.object({ zh: z.string(), en: z.string() }),

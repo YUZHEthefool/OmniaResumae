@@ -5,8 +5,8 @@
 import { chat, extractJSON, type ChatMessage } from './providers'
 import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, Localized } from '@/types/resume'
-import { OptimizeProposalSchema, TailorProposalSchema, TranslateProposalSchema } from '@/schema/validate'
-import type { OptimizeProposal, TailorProposal, TranslateProposal } from '@/types/ai'
+import { OptimizeProposalSchema, TailorProposalSchema, TranslateProposalSchema, JDProposalSchema } from '@/schema/validate'
+import type { OptimizeProposal, TailorProposal, TranslateProposal, JDProposal } from '@/types/ai'
 import { pick } from '@/types/resume'
 
 /**
@@ -17,8 +17,9 @@ async function chatJsonWithRetry(
   config: AIProviderConfig,
   messages: ChatMessage[],
   temperature: number,
+  opts?: { maxTokens?: number },
 ): Promise<unknown> {
-  const raw = await chat(config, { messages, json: true, temperature })
+  const raw = await chat(config, { messages, json: true, temperature, maxTokens: opts?.maxTokens })
   try {
     return JSON.parse(extractJSON(raw))
   } catch {
@@ -30,6 +31,7 @@ async function chatJsonWithRetry(
       ],
       json: true,
       temperature: 0.1,
+      maxTokens: opts?.maxTokens,
     })
     try {
       return JSON.parse(extractJSON(retry))
@@ -108,4 +110,64 @@ export async function translateItems(
   const user = items.map((x, i) => `${i + 1}. ${x}`).join('\n')
   const parsed = await chatJsonWithRetry(config, [{ role: 'system', content: sys }, { role: 'user', content: user }], 0.3)
   return TranslateProposalSchema.parse(parsed)
+}
+
+/* ───────── D. JD 关键词匹配度 ───────── */
+export async function analyzeJD(
+  config: AIProviderConfig,
+  jdText: string,
+  resume: Resume,
+  locale: Locale,
+): Promise<JDProposal> {
+  // 汇总简历已有的关键词（meta.keywords + skills 段 keywords + projects 段 keywords + projects 要点文本），
+  // 供 AI 参考做命中/缺失判断。meta.keywords 是 Localized[]，取当前语种；其余是 string[]。
+  const lang = locale === 'zh' ? '中文' : 'English'
+  const metaKw = (resume.meta.keywords ?? []).map((k) => pick(k, locale)).filter(Boolean)
+  const skillKw: string[] = []
+  const projKw: string[] = []
+  const projText: string[] = []
+  for (const s of resume.sections) {
+    if (!s.visible) continue
+    if (s.type === 'skills') {
+      for (const it of s.items as { keywords?: string[]; name?: Localized; level?: Localized }[]) {
+        if (it.keywords) skillKw.push(...it.keywords)
+      }
+    } else if (s.type === 'projects') {
+      for (const p of s.items as { name?: Localized; description?: Localized; keywords?: string[]; highlights?: Localized[] }[]) {
+        if (p.keywords) projKw.push(...p.keywords)
+        const desc = pick(p.description, locale)
+        if (desc) projText.push(desc)
+        for (const h of p.highlights ?? []) {
+          const ht = pick(h, locale)
+          if (ht) projText.push(ht)
+        }
+      }
+    }
+  }
+  const resumeKw = Array.from(new Set([...metaKw, ...skillKw, ...projKw])).join('、')
+
+  const sys = `你是资深技术招聘顾问。给定一段岗位描述（JD）和候选人的简历关键词/项目文本，判断 JD 里的关键词哪些在简历中已命中、哪些缺失，并给出匹配百分比（${lang}）。
+规则：
+- 只提取具体的技术栈、工具、技能关键词，排除"沟通能力""团队合作"等软技能泛词。
+- matched 与 missing 合起来应覆盖 keywords（所有从 JD 提取的关键词）。
+- score = round(matched.length / keywords.length * 100)（keywords 为空时 score=0）。
+只输出 JSON：{"keywords":["..."],"matched":["..."],"missing":["..."],"score":0}`
+
+  const user = `岗位描述（JD）：
+${jdText.slice(0, 4000)}
+
+候选人简历已有的关键词：${resumeKw || '（无显式关键词）'}
+候选人项目/要点文本（供判断技术栈命中）：
+${projText.join('\n').slice(0, 3000) || '（无）'}
+
+只输出 JSON。`
+
+  const parsed = await chatJsonWithRetry(
+    config,
+    [{ role: 'system', content: sys }, { role: 'user', content: user }],
+    0.3,
+    // JD 关键词列表可能较长，结构化输出给足 token 上限避免截断（对齐 generate/templateStyle）。
+    { maxTokens: 16000 },
+  )
+  return JDProposalSchema.parse(parsed)
 }
