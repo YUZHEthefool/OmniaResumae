@@ -16,8 +16,9 @@ import { useEffect } from 'react'
  */
 export function sanitizeCSS(raw: string): string {
   let s = raw
-  // 1. 剥全部 @import（字体单独经 buildFontHref 处理）；允许无分号结尾（EOF 处的 @import 也剥）
-  s = s.replace(/@import\b[^;]*;?/gi, '/* @import stripped */')
+  // 1. 剥全部 @import（字体单独经 buildFontHref 处理）；允许无分号结尾（EOF 处的 @import 也剥）。
+  //    [^\n;]* 限定单行：旧 [^;]* 跨行，@import 缺分号时会吞掉后续规则直至下一个分号，破坏整段样式。
+  s = s.replace(/@import\b[^\n;]*;?/gi, '/* @import stripped */')
   // 2. 剥 url(...) 里的远程引用：http(s) 与协议相对 //（后者浏览器会解析为 https，仅剥 https? 不够）；
   //    保留 data: 与本地绝对/相对路径（无 //）
   s = s.replace(/url\(\s*(['"]?)\s*(?:https?:)?\/\/[^)]*\1\s*\)/gi, '/* remote url stripped */')
