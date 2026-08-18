@@ -248,4 +248,13 @@ export const en: Dict = {
 
   // Export Word
   exportWord: 'Export Word (.doc)',
+
+  // Full backup / restore
+  backup: 'Backup all',
+  restore: 'Restore backup',
+  confirmRestore: 'Restore overwrites existing data with the same id (different ids kept). Continue?',
+  backupIncludeKeys: 'Include AI/GitHub keys in backup? (local only; share with care)',
+  backupDone: 'Backup exported',
+  restoreDone: 'Restored; reloading…',
+  restoreInvalid: 'Invalid backup file (version mismatch)',
 }

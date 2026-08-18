@@ -250,6 +250,15 @@ export const zh = {
 
   // 导出 Word
   exportWord: '导出 Word（.doc）',
+
+  // 整站备份 / 恢复
+  backup: '备份全部',
+  restore: '恢复备份',
+  confirmRestore: '恢复将覆盖同 id 的现有数据（不同 id 保留）。确定继续？',
+  backupIncludeKeys: '备份是否包含 AI/GitHub 密钥？（仅本机，谨慎分享）',
+  backupDone: '已导出备份',
+  restoreDone: '已恢复，正在刷新…',
+  restoreInvalid: '备份文件无效（version 不匹配）',
 }
 
 export type Dict = typeof zh

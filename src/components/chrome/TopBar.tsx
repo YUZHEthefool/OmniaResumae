@@ -13,6 +13,7 @@ import { resumeToMarkdown } from '@/export/markdown'
 import { resumeToJsonResume } from '@/export/jsonResume'
 import { exportHTML } from '@/export/html'
 import { exportDocx } from '@/export/docx'
+import { exportBackup, importBackup } from '@/export/backup'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -53,6 +54,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
   const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio' | 'health'>(null)
   const barRef = useRef<HTMLDivElement>(null)
+  const restoreFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -122,6 +124,32 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       alert(t('exportFailed', locale) + (e as Error).message)
     } finally {
       setExporting(false)
+    }
+  }
+  const doBackup = async () => {
+    setMenu(null)
+    const includeKeys = window.confirm(t('backupIncludeKeys', locale))
+    try {
+      await exportBackup(includeKeys)
+      alert(t('backupDone', locale))
+    } catch (e) {
+      console.error(e)
+      alert(t('exportFailed', locale) + (e as Error).message)
+    }
+  }
+  const doRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = '' // 重置，否则连续选同一文件不触发 change
+    if (!f) return
+    if (!window.confirm(t('confirmRestore', locale))) return
+    const importKeys = window.confirm(t('backupIncludeKeys', locale))
+    setMenu(null)
+    try {
+      await importBackup(f, importKeys)
+      alert(t('restoreDone', locale))
+    } catch (e2) {
+      const msg = (e2 as Error).message === 'restoreInvalid' ? t('restoreInvalid', locale) : (e2 as Error).message
+      alert(msg)
     }
   }
   const doExportJson = () => {
@@ -358,6 +386,14 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>
               {t('printVector', locale)}
             </button>
+            <div className="border-t border-chrome-border my-1" />
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doBackup}>
+              {t('backup', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => restoreFileRef.current?.click()}>
+              {t('restore', locale)}
+            </button>
+            <input ref={restoreFileRef} type="file" accept="application/json,.json" className="hidden" onChange={doRestore} />
           </Dropdown>
         )}
       </div>
