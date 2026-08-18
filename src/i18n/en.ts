@@ -219,4 +219,17 @@ export const en: Dict = {
 
   // Template delete confirm
   confirmDeleteTemplate: 'Delete template "{name}"? This cannot be undone.',
+
+  // Resume health check (standalone dialog)
+  healthCheck: 'Health Check',
+  hcTitle: 'Health Report',
+  hcScore: 'Score',
+  hcOverall: 'Overview',
+  hcSectionEmpty: 'Section is empty',
+  hcMissingField: 'Missing field',
+  hcSuggestion: 'Suggestion',
+  hcCritical: 'Critical',
+  hcWarn: 'Warning',
+  hcInfo: 'Info',
+  hcNoIssues: 'No issues — resume looks complete',
 }

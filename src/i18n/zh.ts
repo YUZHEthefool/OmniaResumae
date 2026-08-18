@@ -221,6 +221,19 @@ export const zh = {
 
   // 模板删除确认
   confirmDeleteTemplate: '确定删除模板「{name}」？此操作不可撤销。',
+
+  // 简历完整度体检（独立对话框）
+  healthCheck: '简历体检',
+  hcTitle: '体检报告',
+  hcScore: '得分',
+  hcOverall: '总览',
+  hcSectionEmpty: '该段为空',
+  hcMissingField: '缺失字段',
+  hcSuggestion: '建议',
+  hcCritical: '严重',
+  hcWarn: '警告',
+  hcInfo: '提示',
+  hcNoIssues: '暂无问题，简历已较完整',
 }
 
 export type Dict = typeof zh

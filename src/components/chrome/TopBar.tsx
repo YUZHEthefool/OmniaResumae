@@ -16,10 +16,11 @@ import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { TemplateStudioDialog } from '@/components/dialogs/TemplateStudioDialog'
+import { HealthCheckDialog } from '@/components/dialogs/HealthCheckDialog'
 import { useTemplateStore } from '@/store/templateStore'
 import { slugify } from '@/utils/slug'
 import { t } from '@/i18n'
-import { Github, Sparkles, Sun, Moon, Undo2, Redo2 } from 'lucide-react'
+import { Github, Sparkles, Sun, Moon, Undo2, Redo2, HeartPulse } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -49,7 +50,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
-  const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio'>(null)
+  const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio' | 'health'>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -288,6 +289,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <button className={btnClsGhost} title={t('import', locale)} onClick={() => setImportOpen(true)}>{t('import', locale)}</button>
       <button className={btnClsGhost} title={t('github', locale)} onClick={() => setDialog('github')}>{t('github', locale)}</button>
       <button className={btnClsGhost} title={t('templateStudio', locale)} onClick={() => setDialog('studio')}>{t('templateStudio', locale)}</button>
+      <button className={btnClsGhost} title={t('healthCheck', locale)} onClick={() => setDialog('health')}><HeartPulse size={14} className="inline -mt-0.5 mr-0.5" />{t('healthCheck', locale)}</button>
       {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
       <button
         className={clsx(
@@ -348,6 +350,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {dialog === 'github' && <GitHubImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === 'studio' && <TemplateStudioDialog onClose={() => setDialog(null)} />}
+      {dialog === 'health' && <HealthCheckDialog onClose={() => setDialog(null)} />}
     </div>
   )
 }
