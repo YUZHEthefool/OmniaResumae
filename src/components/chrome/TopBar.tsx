@@ -342,7 +342,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       </div>
 
       {/* 弹窗 */}
-      {importOpen && <ImportDialog initialFile={importFile} onClose={() => { setImportOpen(false); setImportFile(null) }} />}
+      {importOpen && <ImportDialog key={importFile?.name ?? 'idle'} initialFile={importFile} onClose={() => { setImportOpen(false); setImportFile(null) }} />}
       {dialog === 'github' && <GitHubImportDialog onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === 'studio' && <TemplateStudioDialog onClose={() => setDialog(null)} />}
