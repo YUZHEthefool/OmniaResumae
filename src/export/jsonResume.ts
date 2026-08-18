@@ -14,8 +14,10 @@ const L = (v: Localized | undefined, loc: Locale) => pick(v, loc)
 
 export function resumeToJsonResume(resume: Resume, locale: Locale): Record<string, unknown> {
   const b = resume.basics
+  // 合并所有同类型的可见段（用 flatMap 而非 find）：addSection 不去重 type，用户可建两个
+  // work 段（如"全职"+"实习"），旧 find 只取第一个，第二个静默丢失——与预览/Markdown 不一致。
   const items = (type: string) =>
-    (resume.sections.find((s) => s.type === type && s.visible)?.items ?? []) as never[]
+    resume.sections.filter((s) => s.type === type && s.visible).flatMap((s) => s.items) as never[]
 
   const clean = <T,>(arr: (T | undefined)[]): T[] => arr.filter((x): x is T => !!x)
 
