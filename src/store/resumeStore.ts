@@ -129,11 +129,31 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
           // 他标签改了同一简历：重载 current。但本标签若有未落盘草稿则跳过，避免丢本标签编辑。
           // 注意 get 是异步的：接收消息时无草稿 ≠ set 时仍无草稿——用户若在这个 IDB 读窗口内
           // 按了一个键，pendingDraft 已置；此时再 set 旧版会覆盖本地编辑致数据丢失。故 .then 内二次校验。
+          // 跨标签重载等同"切换到 DB 版本"：清 past/future（否则本标签 undo 会把他标签编辑覆盖回去）。
           db.resumes.get(m.id as string).then((r) => {
-            if (r && !pendingDraft && get().current?.id === m.id) set({ current: r })
+            if (r && !pendingDraft && get().current?.id === m.id) { lastEditMs = 0; set({ current: r, past: [], future: [] }) }
           })
         } else if (m.type === 'list') {
-          void get().refreshList()
+          // 他标签增删简历：刷新顶栏列表，并协调 current——若当前简历已被他标签删除，
+          // 须切到剩余的第一个（或新建），否则本标签仍指向已删 id，编辑写入会"复活"它。
+          void (async () => {
+            await get().refreshList()
+            const c = get().current
+            if (c && !get().list.some((e) => e.id === c.id)) {
+              if (pendingDraft?.id === c.id) { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }; pendingDraft = null }
+              const list = get().list
+              if (list.length) {
+                const r = await db.resumes.get(list[0].id)
+                if (r) { lastEditMs = 0; set({ current: r, past: [], future: [] }) }
+              } else {
+                const r = createEmptyResume('我的简历')
+                await putResume(r)
+                lastEditMs = 0
+                set({ current: r, list: [toEntry(r)], past: [], future: [] })
+                notify({ type: 'list' })
+              }
+            }
+          })()
         }
       }
     }
