@@ -76,7 +76,9 @@ export default function App() {
   }, [init])
 
   // 全局快捷键：Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 或 Ctrl+Y 重做、Ctrl/Cmd+S 强制保存。
-  // 焦点在 input/textarea/contentEditable 时放行原生撤销（除非 Shift+Z 重做）。
+  // 焦点在 input/textarea/contentEditable 时放行原生撤销/重做——受控输入的 undo/redo 经
+  // onChange 同步回 store，若此处 preventDefault 会切断浏览器原生 redo 路径（旧版只放行
+  // Ctrl+Z，Ctrl+Y / Ctrl+Shift+Z 在输入框内被吞，redo 失效）。输入态全交给浏览器。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey
@@ -86,7 +88,7 @@ export default function App() {
       else if (k === 'z' || k === 'y') {
         const target = e.target as HTMLElement | null
         const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-        if (typing && k === 'z' && !e.shiftKey) return
+        if (typing) return
         e.preventDefault()
         const isRedo = k === 'y' || (k === 'z' && e.shiftKey)
         if (isRedo) useResumeStore.getState().redo()
