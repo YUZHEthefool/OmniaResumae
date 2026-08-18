@@ -39,63 +39,80 @@ export async function runAgentStream(
   const allCalls: ToolCall[] = []
   let finalText = ''
 
-  for (let step = 0; step < maxSteps; step++) {
-    if (opts.signal?.aborted) break
-    const res = await chatWithTools(config, opts.messages, opts.tools, temp, opts.signal, opts.maxTokens)
-
-    if (res.toolCalls.length === 0) {
-      finalText = res.content
-      if (finalText || res.reasoningContent) {
-        opts.messages.push({
-          role: 'assistant',
-          content: finalText || undefined,
-          reasoningContent: res.reasoningContent,
-        })
-        opts.onEvent({ type: 'assistant', content: finalText, reasoningContent: res.reasoningContent })
-      }
-      break
-    }
-
-    // 有工具调用：记录 assistant 这一轮（含 reasoning_content，DeepSeek 多轮需回传）
-    // 归一化 tool_call id：部分端点缺 id，若不补则 assistant.tool_use.id 与 tool_result.toolCallId
-    // 不一致；含同名工具多次调用时旧兜底 `call_${step}_${name}` 会撞 id。这里带序号保证唯一且两侧一致。
-    const calls = res.toolCalls.map((tc, i) => ({ ...tc, id: tc.id || `call_${step}_${i}_${tc.name}` }))
-    opts.messages.push({
-      role: 'assistant',
-      content: res.content || undefined,
-      toolCalls: calls,
-      reasoningContent: res.reasoningContent,
-    })
-    if (res.content || res.reasoningContent) {
-      opts.onEvent({ type: 'assistant', content: res.content, reasoningContent: res.reasoningContent })
-    }
-
-    for (const tc of calls) {
+  // 整个循环 + 收尾包进 try/catch：chatWithTools 在 fetch 进行中被 abort 会抛 AbortError，
+  // 若无 try/catch 会直接逃逸、跳过下方 finalizeMessages，导致 messages 以 tool/user 结尾落库，
+  // 下次发送 Anthropic 报 400 锁死会话。catch 内先补齐未配对的 tool_result + 收尾 assistant，
+  // 再决定是否 rethrow（AbortError 不 rethrow，CopilotPanel 已吞；其余 rethrow 让 UI 显示红错）。
+  try {
+    for (let step = 0; step < maxSteps; step++) {
       if (opts.signal?.aborted) break
-      opts.onEvent({ type: 'tool_call', call: tc })
-      const tool = opts.tools.find((t) => t.name === tc.name)
-      const result = tool ? await safeRunAsync(tool.run, tc.args) : `工具 ${tc.name} 不存在`
-      opts.messages.push({ role: 'tool', toolCallId: tc.id, name: tc.name, content: result })
-      opts.onEvent({ type: 'tool_result', callId: tc.id, name: tc.name, result })
-      allCalls.push(tc)
-    }
-    finalText = res.content
+      const res = await chatWithTools(config, opts.messages, opts.tools, temp, opts.signal, opts.maxTokens)
 
-    if (step === maxSteps - 1) {
-      finalizeMessages(opts.messages, '(达到步数上限)')
-      opts.onEvent({ type: 'done', finalText: '(达到步数上限)' })
+      if (res.toolCalls.length === 0) {
+        finalText = res.content
+        if (finalText || res.reasoningContent) {
+          opts.messages.push({
+            role: 'assistant',
+            content: finalText || undefined,
+            reasoningContent: res.reasoningContent,
+          })
+          opts.onEvent({ type: 'assistant', content: finalText, reasoningContent: res.reasoningContent })
+        }
+        break
+      }
+
+      // 有工具调用：记录 assistant 这一轮（含 reasoning_content，DeepSeek 多轮需回传）
+      // 归一化 tool_call id：部分端点缺 id，若不补则 assistant.tool_use.id 与 tool_result.toolCallId
+      // 不一致；含同名工具多次调用时旧兜底 `call_${step}_${name}` 会撞 id。这里带序号保证唯一且两侧一致。
+      const calls = res.toolCalls.map((tc, i) => ({ ...tc, id: tc.id || `call_${step}_${i}_${tc.name}` }))
+      opts.messages.push({
+        role: 'assistant',
+        content: res.content || undefined,
+        toolCalls: calls,
+        reasoningContent: res.reasoningContent,
+      })
+      if (res.content || res.reasoningContent) {
+        opts.onEvent({ type: 'assistant', content: res.content, reasoningContent: res.reasoningContent })
+      }
+
+      for (const tc of calls) {
+        if (opts.signal?.aborted) break
+        opts.onEvent({ type: 'tool_call', call: tc })
+        const tool = opts.tools.find((t) => t.name === tc.name)
+        const result = tool ? await safeRunAsync(tool.run, tc.args) : `工具 ${tc.name} 不存在`
+        opts.messages.push({ role: 'tool', toolCallId: tc.id, name: tc.name, content: result })
+        opts.onEvent({ type: 'tool_result', callId: tc.id, name: tc.name, result })
+        allCalls.push(tc)
+      }
+      finalText = res.content
+
+      if (step === maxSteps - 1) {
+        finalizeMessages(opts.messages, '(达到步数上限)')
+        opts.onEvent({ type: 'done', finalText: '(达到步数上限)' })
+        return { toolCalls: allCalls, finalText, messages: opts.messages }
+      }
+    }
+
+    if (opts.signal?.aborted) {
+      finalizeMessages(opts.messages, '(已停止)')
+      opts.onEvent({ type: 'done', finalText: '(已停止)' })
+    } else {
+      finalizeMessages(opts.messages, '(已完成)')
+      opts.onEvent({ type: 'done', finalText })
+    }
+    return { toolCalls: allCalls, finalText, messages: opts.messages }
+  } catch (e) {
+    const aborted = (e as Error)?.name === 'AbortError' || !!opts.signal?.aborted
+    // 异常路径同样要补齐未配对的 tool_result + 收尾，否则下次发送会被 400 锁死。
+    finalizeMessages(opts.messages, aborted ? '(已停止)' : '(出错)')
+    if (aborted) {
+      // AbortError：CopilotPanel 的 catch 已吞（显示"已停止"），此处只发 done 不 rethrow。
+      opts.onEvent({ type: 'done', finalText: '(已停止)' })
       return { toolCalls: allCalls, finalText, messages: opts.messages }
     }
+    // 非 abort：rethrow 让 CopilotPanel catch 显示红色错误条目。finalize 已保证下次发送不锁死。
+    throw e
   }
-
-  if (opts.signal?.aborted) {
-    finalizeMessages(opts.messages, '(已停止)')
-    opts.onEvent({ type: 'done', finalText: '(已停止)' })
-  } else {
-    finalizeMessages(opts.messages, '(已完成)')
-    opts.onEvent({ type: 'done', finalText })
-  }
-  return { toolCalls: allCalls, finalText, messages: opts.messages }
 }
 
 /**
