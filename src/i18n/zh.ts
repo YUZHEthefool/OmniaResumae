@@ -218,6 +218,9 @@ export const zh = {
   patHint: '仅需 repo 读权限（读私有仓）或留空只读公开仓。',
   done: '完成',
   confirmDeleteSection: '确定删除段落「{name}」及其所有条目？此操作不可撤销。',
+
+  // 模板删除确认
+  confirmDeleteTemplate: '确定删除模板「{name}」？此操作不可撤销。',
 }
 
 export type Dict = typeof zh

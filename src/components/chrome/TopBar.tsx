@@ -256,6 +256,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
                 onRemove={
                   tp.meta.id.startsWith('gen_')
                     ? () => {
+                        // 生成模板由 AI 耗 token 生成，误点 ✕ 会永久删除且不可撤销——删除前二次确认（与简历/段落删除一致）。
+                        if (!window.confirm(t('confirmDeleteTemplate', locale).replace('{name}', tp.meta.name[locale]))) return
                         setMenu(null)
                         useTemplateStore.getState().removeGenerated(tp.meta.id)
                         unregisterTemplate(tp.meta.id)

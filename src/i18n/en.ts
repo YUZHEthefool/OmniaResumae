@@ -216,4 +216,7 @@ export const en: Dict = {
   patHint: 'Only needs repo read scope (private repos), or leave empty for public repos only.',
   done: 'Done',
   confirmDeleteSection: 'Delete section "{name}" and all its items? This cannot be undone.',
+
+  // Template delete confirm
+  confirmDeleteTemplate: 'Delete template "{name}"? This cannot be undone.',
 }
