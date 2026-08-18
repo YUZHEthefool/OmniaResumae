@@ -30,6 +30,8 @@ export async function exportHTML(node: HTMLElement, resume: Resume, locale: Loca
   clone.style.margin = '0 auto'
   clone.removeAttribute('contenteditable')
   clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
+  // 剥离预览专用的 A4 分页引导线（preview-only），否则会进导出的 HTML
+  clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
 
   const name = slugify(pick(resume.basics.name, locale, 'resume'))
   const html = `<!doctype html><html lang="${locale}"><head><meta charset="utf-8">

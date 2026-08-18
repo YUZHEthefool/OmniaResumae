@@ -135,7 +135,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
               <div className="text-chrome-muted text-sm">{t('emptyHint', locale as Locale)}</div>
             )}
             {showPages && guide.h > 0 && Array.from({ length: guide.count }, (_, i) => (
-              <div key={`pg${i}`} style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * guide.h, borderTop: '1px dashed #f59e0b', zIndex: 5, pointerEvents: 'none' }}>
+              <div key={`pg${i}`} className="preview-only" style={{ position: 'absolute', left: 0, right: 0, top: (i + 1) * guide.h, borderTop: '1px dashed #f59e0b', zIndex: 5, pointerEvents: 'none' }}>
                 <span style={{ position: 'absolute', right: 0, top: -13, fontSize: 10, color: '#f59e0b', background: 'rgba(255,255,255,.85)', padding: '0 4px', borderRadius: 2 }}>A4 · p{i + 2}</span>
               </div>
             ))}

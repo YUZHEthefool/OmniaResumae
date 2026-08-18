@@ -75,6 +75,8 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   // 去除"编辑预览"模式留在 ref 节点上的虚线 outline 与 contenteditable，避免被导出
   clone.style.outline = 'none'
   clone.removeAttribute('contenteditable')
+  // 剥离预览专用的 A4 分页引导线（preview-only），否则会随克隆进 PDF/PNG
+  clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
   holder.appendChild(clone)
   document.body.appendChild(holder)
 
@@ -205,6 +207,8 @@ export async function exportImage(node: HTMLElement, resume: Resume, locale: Loc
   // 去除"编辑预览"模式留在 ref 节点上的虚线 outline 与 contenteditable
   clone.style.outline = 'none'
   clone.removeAttribute('contenteditable')
+  // 剥离预览专用的 A4 分页引导线（preview-only）
+  clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
   holder.appendChild(clone)
   document.body.appendChild(holder)
 
@@ -279,6 +283,8 @@ export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
   clone.style.outline = 'none'
   clone.removeAttribute('contenteditable')
   clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
+  // 剥离预览专用的 A4 分页引导线（preview-only），否则会进打印文档
+  clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
 
   win.document.write(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8">
     <title>${slugify(pick(resume.basics.name, locale, 'resume'))}_${locale}</title>
