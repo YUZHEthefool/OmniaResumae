@@ -63,6 +63,7 @@ ${rawText.slice(0, 24000)}
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     json: true,
     temperature: 0.2,
+    maxTokens: 16000,
   })
 
   const jsonStr = extractJSON(content)
@@ -80,6 +81,7 @@ ${rawText.slice(0, 24000)}
       ],
       json: true,
       temperature: 0.1,
+      maxTokens: 16000,
     })
     try {
       parsed = JSON.parse(extractJSON(retry))

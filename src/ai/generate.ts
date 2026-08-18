@@ -44,6 +44,7 @@ ${sourceText ? sourceText.slice(0, 24000) : '（无）'}
     messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
     json: true,
     temperature: 0.5,
+    maxTokens: 16000,
   })
 
   let parsed: unknown
@@ -59,6 +60,7 @@ ${sourceText ? sourceText.slice(0, 24000) : '（无）'}
       ],
       json: true,
       temperature: 0.1,
+      maxTokens: 16000,
     })
     try {
       parsed = JSON.parse(extractJSON(retry))
