@@ -245,4 +245,7 @@ export const en: Dict = {
   jdAnalyzing: 'AI analyzing…',
   jdErr: 'Analysis failed: ',
   jdAdded: 'Added {n} keywords',
+
+  // Export Word
+  exportWord: 'Export Word (.doc)',
 }

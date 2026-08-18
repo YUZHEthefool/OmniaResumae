@@ -247,6 +247,9 @@ export const zh = {
   jdAnalyzing: 'AI 分析中…',
   jdErr: '分析失败：',
   jdAdded: '已加入 {n} 个关键词',
+
+  // 导出 Word
+  exportWord: '导出 Word（.doc）',
 }
 
 export type Dict = typeof zh

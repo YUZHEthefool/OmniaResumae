@@ -12,6 +12,7 @@ import { exportPDF, printResume, exportImage } from '@/export/pdf'
 import { resumeToMarkdown } from '@/export/markdown'
 import { resumeToJsonResume } from '@/export/jsonResume'
 import { exportHTML } from '@/export/html'
+import { exportDocx } from '@/export/docx'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -103,6 +104,19 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     setMenu(null)
     try {
       await exportHTML(previewRef.current, current, locale)
+    } catch (e) {
+      console.error(e)
+      alert(t('exportFailed', locale) + (e as Error).message)
+    } finally {
+      setExporting(false)
+    }
+  }
+  const doExportDocx = async () => {
+    if (!current || !previewRef.current) return
+    setExporting(true)
+    setMenu(null)
+    try {
+      await exportDocx(previewRef.current, current, locale)
     } catch (e) {
       console.error(e)
       alert(t('exportFailed', locale) + (e as Error).message)
@@ -327,6 +341,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportHtml}>
               {t('exportHtml', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportDocx}>
+              {t('exportWord', locale)}
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJson}>
               {t('exportJson', locale)}
