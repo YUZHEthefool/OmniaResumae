@@ -296,7 +296,7 @@ function makeSection(title: string): ImportFragment['sections'][number] {
   }
 }
 
-function extractContact(text: string): Partial<{ email: string; phone: string; url: string }> {
+function extractContact(text: string): Partial<{ email: string; phone: string; url: string }> | null {
   const out: Partial<{ email: string; phone: string; url: string }> = {}
   const email = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)
   if (email) out.email = email[0]
@@ -304,5 +304,7 @@ function extractContact(text: string): Partial<{ email: string; phone: string; u
   if (phone) out.phone = phone[0]
   const url = text.match(/https?:\/\/[^\s)]+/)
   if (url) out.url = url[0]
-  return Object.keys(out).length ? out : {}
+  // 返回 null（而非 {}）：{} 是 truthy，调用方 `if (contact)` 会总成立，
+  // 导致缺 url 的简历后续每个段落被 continue 吞掉（summary/description/日期全丢）。
+  return Object.keys(out).length ? out : null
 }
