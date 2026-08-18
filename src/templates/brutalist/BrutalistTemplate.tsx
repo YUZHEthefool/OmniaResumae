@@ -361,13 +361,22 @@ function renderSidebarBody(section: Section, locale: Locale) {
     case 'community':
       return (
         <>
-          {(section.items as CommunityItem[]).map((c) => (
-            <a className="community-row" key={c.id} href={c.url} target="_blank" rel="noreferrer">
-              <span className="community-platform">{c.platform}</span>
-              <span className="community-handle">@{c.handle}</span>
-              {c.url && <span className="community-url">{c.url.replace(/^https?:\/\//, '')}</span>}
-            </a>
-          ))}
+          {(section.items as CommunityItem[]).map((c) => {
+            // 空 URL 不渲染 <a>：旧版 href="" 始终渲染 <a>，点击会打开指向当前应用的重复标签页。
+            // 仅当有 URL 时才作外链，否则降级为普通 div（与其他模板一致）。
+            const inner = (
+              <>
+                <span className="community-platform">{c.platform}</span>
+                <span className="community-handle">@{c.handle}</span>
+                {c.url && <span className="community-url">{c.url.replace(/^https?:\/\//, '')}</span>}
+              </>
+            )
+            return c.url ? (
+              <a className="community-row" key={c.id} href={c.url} target="_blank" rel="noreferrer">{inner}</a>
+            ) : (
+              <div className="community-row" key={c.id}>{inner}</div>
+            )
+          })}
         </>
       )
     case 'awards':
