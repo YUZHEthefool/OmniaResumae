@@ -55,6 +55,7 @@ export default function App() {
   const init = useResumeStore((s) => s.init)
   const loaded = useResumeStore((s) => s.loaded)
   const copilotOpen = useUIStore((s) => s.copilotOpen)
+  const locale = useUIStore((s) => s.locale)
   const previewRef = useRef<HTMLDivElement>(null)
 
   // 选中模板随简历走、跨刷新保持：current 变化时（init 载入 / 切简历 / 内容更新）
@@ -102,7 +103,7 @@ export default function App() {
   if (!loaded) {
     return (
       <div className="h-full flex items-center justify-center text-chrome-muted text-sm">
-        正在加载本地简历…
+        {t('loading', locale)}
       </div>
     )
   }
