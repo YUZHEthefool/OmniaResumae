@@ -170,7 +170,7 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
         let row = r
         if (!getTemplate(row.templateId)) row = { ...row, templateId: 'serif-classic' }
         const cleaned = sanitizeResume(row)
-        if (cleaned !== row || row.templateId !== r.templateId) void putResume(cleaned)
+        if (cleaned !== row || row.templateId !== r.templateId) void putResume(cleaned).catch((e) => console.error('[resumeStore] sanitize persist failed', e))
         return cleaned
       } catch (e) {
         console.error('[resumeStore] sanitize failed for', r?.id, e)
@@ -218,6 +218,10 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     if (pendingDraft?.id === id) {
       if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
       pendingDraft = null
+      // 仍要等已入队的 putResume(id) 落盘完成再删：savePromise 链可能被前一个慢 put 堵住，
+      // doPut(id) 已入链但尚未执行；若直接 deleteResume(id)，IDB 事务先于排队中的 put 落盘，
+      // 随后 put 才写回 → 已删简历复活。等链清空（被丢弃的 draft 不会再入链）再删即顺序正确。
+      await savePromise
     } else {
       await flushSave()
     }
