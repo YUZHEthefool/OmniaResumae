@@ -77,6 +77,9 @@ export async function exportPDF(node: HTMLElement, resume: Resume, locale: Local
   clone.removeAttribute('contenteditable')
   // 剥离预览专用的 A4 分页引导线（preview-only），否则会随克隆进 PDF/PNG
   clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
+  // 剥离单页预览留在根上的 export-single 类：它是预览期产物，多页/PNG 不该带紧凑布局。
+  // 单页 PDF 的紧凑由上方 holder.classList.add('export-single') 提供，剥 clone 上的冗余类不影响。
+  clone.classList.remove('export-single')
   holder.appendChild(clone)
   document.body.appendChild(holder)
 
@@ -288,6 +291,8 @@ export function printResume(node: HTMLElement, resume: Resume, locale: Locale) {
   clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
   // 剥离预览专用的 A4 分页引导线（preview-only），否则会进打印文档
   clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
+  // 剥离单页预览的 export-single 类，打印应用全布局而非紧凑单页布局
+  clone.classList.remove('export-single')
 
   win.document.write(`<!doctype html><html lang="${locale}"><head><meta charset="utf-8">
     <title>${slugify(pick(resume.basics.name, locale, 'resume'))}_${locale}</title>

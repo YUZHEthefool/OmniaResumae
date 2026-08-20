@@ -44,6 +44,8 @@ export async function exportDocx(node: HTMLElement, resume: Resume, locale: Loca
   clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
   // 剥离预览专用的 A4 分页引导线 + 编辑模式残留，避免进 Word
   clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
+  // 剥离单页预览的 export-single 类，Word 导出应用全布局（与 docx.ts 顶部注释设计一致）
+  clone.classList.remove('export-single')
 
   const name = slugify(pick(resume.basics.name, locale, 'resume'))
   // Word 兼容 HTML：MSO 命名空间让 Word 识别为文档；Print 视图 + 边距提示更接近简历排版。
