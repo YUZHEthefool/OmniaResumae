@@ -178,6 +178,14 @@ export const JDProposalSchema = z.object({
   score: z.number().min(0).max(100).default(0),
 })
 
+export const CoverLetterProposalSchema = z.object({
+  body: z.string().default(''),
+})
+
+export const InterviewQProposalSchema = z.object({
+  questions: z.array(z.object({ q: z.string(), a: z.string() })).default([]),
+})
+
 /* ───────── AI 生成模板校验（模板工坊） ───────── */
 export const GeneratedTemplateSchema = z.object({
   name: z.object({ zh: z.string(), en: z.string() }),

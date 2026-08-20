@@ -5,8 +5,8 @@
 import { chat, extractJSON, type ChatMessage } from './providers'
 import type { AIProviderConfig } from '@/types/ai'
 import type { Locale, Resume, Localized } from '@/types/resume'
-import { OptimizeProposalSchema, TailorProposalSchema, TranslateProposalSchema, JDProposalSchema } from '@/schema/validate'
-import type { OptimizeProposal, TailorProposal, TranslateProposal, JDProposal } from '@/types/ai'
+import { OptimizeProposalSchema, TailorProposalSchema, TranslateProposalSchema, JDProposalSchema, CoverLetterProposalSchema, InterviewQProposalSchema } from '@/schema/validate'
+import type { OptimizeProposal, TailorProposal, TranslateProposal, JDProposal, CoverLetterProposal, InterviewQProposal } from '@/types/ai'
 import { pick } from '@/types/resume'
 
 /**
@@ -170,4 +170,94 @@ ${projText.join('\n').slice(0, 3000) || '（无）'}
     { maxTokens: 16000 },
   )
   return JDProposalSchema.parse(parsed)
+}
+
+/* ───────── E. 简历摘要（求职信/面试问答共用） ───────── */
+/** 把简历拍平成对 AI 友好的纯文本摘要（姓名/头衔/联系方式 + 各段要点），供求职信/面试问答上下文用。 */
+function resumeDigest(resume: Resume, locale: Locale): string {
+  const b = resume.basics
+  const L = (v: Localized | undefined) => pick(v, locale)
+  const lines: string[] = []
+  lines.push(`${L(b.name)}${L(b.label) ? ` - ${L(b.label)}` : ''}`)
+  const contact = [b.email, b.phone, b.url].filter(Boolean).join(' | ')
+  if (contact) lines.push(contact)
+  if (L(b.summary)) lines.push(`简介：${L(b.summary)}`)
+  for (const s of resume.sections) {
+    if (!s.visible || !s.items.length) continue
+    const title = L(s.title) || s.type
+    lines.push(`\n【${title}】`)
+    s.items.forEach((it) => {
+      const o = it as Record<string, unknown>
+      const head = pick((o as { name?: Localized }).name ?? (o as { title?: Localized }).title ?? (o as { institution?: Localized }).institution ?? (o as { tag?: Localized }).tag ?? (o as { label?: Localized }).label, locale)
+      const date = [o.startDate as string, o.endDate as string].filter(Boolean).join('-')
+      const hl = (o.highlights as Localized[] | undefined) ?? []
+      const hlText = hl.map((h) => pick(h, locale)).filter(Boolean).join('；')
+      lines.push(`- ${head}${date ? ` (${date})` : ''}${hlText ? `：${hlText}` : ''}`)
+    })
+  }
+  return lines.join('\n')
+}
+
+/* ───────── F. 求职信生成 ───────── */
+export async function generateCoverLetter(
+  config: AIProviderConfig,
+  resume: Resume,
+  company: string,
+  jdText: string,
+  locale: Locale,
+): Promise<CoverLetterProposal> {
+  const lang = locale === 'zh' ? '中文' : 'English'
+  const sys = `你是资深求职顾问。基于候选人的真实简历与目标岗位，撰写一封专业的求职信（${lang}）。
+要求：
+- 开头表明应聘岗位与公司，结尾表达期待面试的意愿，落款用候选人姓名。
+- 主体 2-3 段：结合简历中的真实项目/工作经历，说明为何胜任该岗位；贴合 JD 关键词但不说谎、不编造未在简历中的经历。
+- 语气专业、自信、真诚，避免空话套话。篇幅 300-450 字（中文）或 250-350 词（英文）。
+- 用 Markdown 段落（可用 ** 加粗关键词，但不要用标题 #）。
+只输出 JSON：{"body":"求职信正文（Markdown）"}`
+  const user = `目标公司：${company}
+岗位描述 / JD：
+${jdText.slice(0, 4000)}
+
+候选人简历摘要：
+${resumeDigest(resume, locale).slice(0, 4000)}
+
+只输出 JSON。`
+
+  const parsed = await chatJsonWithRetry(
+    config,
+    [{ role: 'system', content: sys }, { role: 'user', content: user }],
+    0.5,
+    { maxTokens: 16000 },
+  )
+  return CoverLetterProposalSchema.parse(parsed)
+}
+
+/* ───────── G. 面试问答准备 ───────── */
+export async function generateInterviewQ(
+  config: AIProviderConfig,
+  resume: Resume,
+  jobRole: string,
+  locale: Locale,
+): Promise<InterviewQProposal> {
+  const lang = locale === 'zh' ? '中文' : 'English'
+  const sys = `你是资深技术面试官。基于候选人的真实简历，生成 8 条高频面试题 + 答题要点（${lang}）。
+要求：
+- 题目覆盖：自我介绍、项目深挖（针对简历中的具体项目）、技术基础、行为面试（STAR 法）、针对目标岗位的适配问题。
+- 答题要点：用 STAR 法（情境/任务/行动/结果）组织，引用简历中的真实项目/经历作答，给出可落地的回答框架，不要编造简历外的经历。
+- 每题答案 2-4 句，简洁可背诵。
+只输出 JSON：{"questions":[{"q":"问题","a":"答题要点"}]}`
+  const user = `目标岗位：${jobRole}
+
+候选人简历摘要：
+${resumeDigest(resume, locale).slice(0, 4000)}
+
+只输出 JSON。`
+
+  const parsed = await chatJsonWithRetry(
+    config,
+    [{ role: 'system', content: sys }, { role: 'user', content: user }],
+    0.5,
+    { maxTokens: 16000 },
+  )
+  return InterviewQProposalSchema.parse(parsed)
 }

@@ -18,6 +18,8 @@ import { extractPdfText } from '@/importers/pdf'
 import { renderMarkdown } from '@/ai/markdown'
 import { OptimizeAction, TailorAction, TranslateAction } from '@/ai/quickActions'
 import { JDMatchAction } from '@/ai/JDMatchAction'
+import { CoverLetterAction } from '@/ai/CoverLetterAction'
+import { InterviewQAction } from '@/ai/InterviewQAction'
 import { t } from '@/i18n'
 import { pick } from '@/types/resume'
 import type { Skill } from '@/skills/types'
@@ -49,7 +51,7 @@ export function CopilotPanel() {
 
   const [input, setInput] = useState('')
   const [running, setRunning] = useState(false)
-  const [quickMode, setQuickMode] = useState<null | 'optimize' | 'tailor' | 'translate' | 'jdmatch'>(null)
+  const [quickMode, setQuickMode] = useState<null | 'optimize' | 'tailor' | 'translate' | 'jdmatch' | 'cover' | 'interview'>(null)
   const abortRef = useRef<AbortController | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const skillFileRef = useRef<HTMLInputElement>(null)
@@ -325,21 +327,23 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
         </div>
       </div>
 
-      {/* 快捷动作：优化润色 / 目标包装 / 翻译（提案-逐条采纳） */}
-      <div className="px-3 py-1.5 border-b border-copilot-border flex items-center gap-1">
-        <span className="text-[10px] text-copilot-dim mr-0.5">{t('quickActions', locale)}</span>
-        {(['optimize', 'tailor', 'translate', 'jdmatch'] as const).map((m) => (
-          <button
-            key={m}
-            className={clsx(
-              'flex-1 px-1 py-1 text-[10px] whitespace-nowrap rounded transition-colors',
-              quickMode === m ? 'bg-copilot-accent text-white' : 'text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface',
-            )}
-            onClick={() => setQuickMode(quickMode === m ? null : m)}
-          >
-            {m === 'optimize' ? t('quickOptimize', locale) : m === 'tailor' ? t('quickTailor', locale) : m === 'translate' ? t('quickTranslate', locale) : t('quickJdMatch', locale)}
-          </button>
-        ))}
+      {/* 快捷动作：优化润色 / 目标包装 / 翻译 / JD 匹配 / 求职信 / 面试问答 */}
+      <div className="px-3 py-1.5 border-b border-copilot-border">
+        <div className="text-[10px] text-copilot-dim mb-1">{t('quickActions', locale)}</div>
+        <div className="flex flex-wrap gap-1">
+          {(['optimize', 'tailor', 'translate', 'jdmatch', 'cover', 'interview'] as const).map((m) => (
+            <button
+              key={m}
+              className={clsx(
+                'px-1.5 py-1 text-[10px] whitespace-nowrap rounded transition-colors',
+                quickMode === m ? 'bg-copilot-accent text-white' : 'text-copilot-muted hover:text-copilot-ink hover:bg-copilot-surface',
+              )}
+              onClick={() => setQuickMode(quickMode === m ? null : m)}
+            >
+              {m === 'optimize' ? t('quickOptimize', locale) : m === 'tailor' ? t('quickTailor', locale) : m === 'translate' ? t('quickTranslate', locale) : m === 'jdmatch' ? t('quickJdMatch', locale) : m === 'cover' ? t('quickCover', locale) : t('quickInterview', locale)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4 space-y-3 scroll-smooth">
@@ -355,6 +359,8 @@ ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 
             {quickMode === 'tailor' && <TailorAction />}
             {quickMode === 'translate' && <TranslateAction />}
             {quickMode === 'jdmatch' && <JDMatchAction />}
+            {quickMode === 'cover' && <CoverLetterAction />}
+            {quickMode === 'interview' && <InterviewQAction />}
           </div>
         ) : (
           <>

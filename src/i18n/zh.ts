@@ -95,6 +95,8 @@ export const zh = {
   quickOptimize: '优化润色',
   quickTailor: '目标包装',
   quickTranslate: '翻译',
+  quickCover: '求职信',
+  quickInterview: '面试题',
   quickActions: '快捷动作',
 
   // Skill
@@ -274,6 +276,27 @@ export const zh = {
   jdAnalyzing: 'AI 分析中…',
   jdErr: '分析失败：',
   jdAdded: '已加入 {n} 个关键词',
+
+  // 求职信生成（CopilotPanel quickMode 'cover'）
+  coverCompany: '目标公司，如 字节跳动 / Google',
+  coverJd: '粘贴 JD 或岗位描述（可选，有则更贴合）',
+  coverGenerate: '生成求职信',
+  coverGenerating: 'AI 撰写中…',
+  coverCopy: '复制全文',
+  coverCopied: '已复制',
+  coverDownload: '下载 .md',
+  coverNoKey: '请先在「设置」中配置 AI 密钥',
+  coverNoCompany: '请填写目标公司',
+  coverErr: '生成失败：',
+
+  // 面试问答准备（CopilotPanel quickMode 'interview'）
+  interviewRole: '目标岗位，如 后端工程师 / Frontend Engineer',
+  interviewGenerate: '生成面试题',
+  interviewGenerating: 'AI 准备中…',
+  interviewCopyAll: '复制全部问答',
+  interviewNoKey: '请先在「设置」中配置 AI 密钥',
+  interviewNoRole: '请填写目标岗位',
+  interviewErr: '生成失败：',
 
   // 导出 Word
   exportWord: '导出 Word（.doc）',

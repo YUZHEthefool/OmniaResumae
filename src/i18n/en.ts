@@ -93,6 +93,8 @@ export const en: Dict = {
   quickOptimize: 'Optimize',
   quickTailor: 'Tailor',
   quickTranslate: 'Translate',
+  quickCover: 'Cover letter',
+  quickInterview: 'Interview',
   quickActions: 'Quick actions',
 
   // Skill
@@ -272,6 +274,27 @@ export const en: Dict = {
   jdAnalyzing: 'AI analyzing…',
   jdErr: 'Analysis failed: ',
   jdAdded: 'Added {n} keywords',
+
+  // Cover letter generation (CopilotPanel quickMode 'cover')
+  coverCompany: 'Target company, e.g. ByteDance / Google',
+  coverJd: 'Paste the JD or role description (optional; improves fit)',
+  coverGenerate: 'Generate cover letter',
+  coverGenerating: 'AI writing…',
+  coverCopy: 'Copy text',
+  coverCopied: 'Copied',
+  coverDownload: 'Download .md',
+  coverNoKey: 'Please configure an AI key in Settings first',
+  coverNoCompany: 'Please enter a target company',
+  coverErr: 'Generation failed: ',
+
+  // Interview Q&A prep (CopilotPanel quickMode 'interview')
+  interviewRole: 'Target role, e.g. Backend Engineer / Frontend Engineer',
+  interviewGenerate: 'Generate questions',
+  interviewGenerating: 'AI preparing…',
+  interviewCopyAll: 'Copy all Q&A',
+  interviewNoKey: 'Please configure an AI key in Settings first',
+  interviewNoRole: 'Please enter a target role',
+  interviewErr: 'Generation failed: ',
 
   // Export Word
   exportWord: 'Export Word (.doc)',

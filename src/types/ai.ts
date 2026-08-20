@@ -128,3 +128,13 @@ export interface JDProposal {
   /** 匹配百分比 0-100 */
   score: number
 }
+
+/** 求职信提案：基于当前简历 + 目标岗位/JD 生成求职信正文（Markdown） */
+export interface CoverLetterProposal {
+  body: string
+}
+
+/** 面试问答提案：基于当前简历生成高频面试题 + 答题要点 */
+export interface InterviewQProposal {
+  questions: { q: string; a: string }[]
+}
