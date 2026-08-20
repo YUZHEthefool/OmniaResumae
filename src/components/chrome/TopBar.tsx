@@ -142,7 +142,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     e.target.value = '' // 重置，否则连续选同一文件不触发 change
     if (!f) return
     if (!window.confirm(t('confirmRestore', locale))) return
-    const importKeys = window.confirm(t('backupIncludeKeys', locale))
+    const importKeys = window.confirm(t('restoreIncludeKeys', locale))
     setMenu(null)
     try {
       await importBackup(f, importKeys)

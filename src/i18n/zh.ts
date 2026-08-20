@@ -281,9 +281,23 @@ export const zh = {
   restore: '恢复备份',
   confirmRestore: '恢复将覆盖同 id 的现有数据（不同 id 保留）。确定继续？',
   backupIncludeKeys: '备份是否包含 AI/GitHub 密钥？（仅本机，谨慎分享）',
+  restoreIncludeKeys: '是否从备份恢复 AI/GitHub 密钥？（若备份不含密钥则此项无效）',
   backupDone: '已导出备份',
   restoreDone: '已恢复，正在刷新…',
   restoreInvalid: '备份文件无效（version 不匹配）',
+
+  // 简历快照 / 命名版本
+  snapshot: '快照',
+  snapshotTitle: '简历版本',
+  snapshotNew: '新建快照',
+  snapshotName: '快照名称，如「投 A 公司版」',
+  snapshotCreate: '保存当前为快照',
+  snapshotRestore: '恢复',
+  snapshotDelete: '删除',
+  snapshotEmpty: '暂无快照。保存当前简历为命名版本，便于多版本投递管理。',
+  confirmDeleteSnapshot: '确定删除快照「{name}」？此操作不可撤销。',
+  snapshotCreatedAt: '创建于',
+  snapshotRestored: '已恢复，撤销可用 Ctrl+Z',
 }
 
 export type Dict = typeof zh

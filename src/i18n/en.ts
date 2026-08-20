@@ -279,7 +279,21 @@ export const en: Dict = {
   restore: 'Restore backup',
   confirmRestore: 'Restore overwrites existing data with the same id (different ids kept). Continue?',
   backupIncludeKeys: 'Include AI/GitHub keys in backup? (local only; share with care)',
+  restoreIncludeKeys: 'Restore AI/GitHub keys from this backup? (no-op if the backup has none)',
   backupDone: 'Backup exported',
   restoreDone: 'Restored; reloading…',
   restoreInvalid: 'Invalid backup file (version mismatch)',
+
+  // Resume snapshots / named versions
+  snapshot: 'Snapshots',
+  snapshotTitle: 'Resume versions',
+  snapshotNew: 'New snapshot',
+  snapshotName: 'Snapshot name, e.g. "For Company A"',
+  snapshotCreate: 'Save current as snapshot',
+  snapshotRestore: 'Restore',
+  snapshotDelete: 'Delete',
+  snapshotEmpty: 'No snapshots yet. Save the current resume as a named version to manage multiple submissions.',
+  confirmDeleteSnapshot: 'Delete snapshot "{name}"? This cannot be undone.',
+  snapshotCreatedAt: 'Created',
+  snapshotRestored: 'Restored — undo with Ctrl+Z',
 }
