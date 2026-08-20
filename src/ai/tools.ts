@@ -150,7 +150,14 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
             if (!Array.isArray(keywords)) return 'ok: meta keywords 非数组,已忽略'
             const prev = d.meta.keywords ?? []
             d.meta.keywords = (keywords as unknown[]).map((k): Localized => {
-              if (isLocalized(k)) return { zh: k.zh, en: k.en }
+              if (isLocalized(k)) {
+                // 模型常只填当前 locale（如 {zh:"React"}，en 缺失）——若直接返回 {zh:k.zh,en:k.en}
+                // 会用 undefined 擦掉已有的另一语言翻译（string 分支会保留，这里也要保留）。
+                // 按当前语种值匹配旧条目回填缺失的另一语言；模型若主动给完整 {zh,en} 则原样采用。
+                const curVal = (k[locale] ?? '').trim()
+                const old = curVal ? prev.find((p) => (p?.[locale] ?? '').trim() === curVal) : undefined
+                return { zh: k.zh ?? old?.zh, en: k.en ?? old?.en } as Localized
+              }
               const str = typeof k === 'string' ? k : ''
               if (!str.trim()) return { zh: undefined, en: undefined }
               const old = prev.find((p) => (p?.[locale] ?? '') === str)
