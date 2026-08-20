@@ -18,6 +18,7 @@ import { SECTION_TITLE_PRESETS } from '@/schema/defaults'
 import { createSampleResume } from '@/schema/seed'
 import { getTemplate } from '@/templates/registry'
 import { useChatStore } from '@/store/chatStore'
+import { useSnapshotStore } from '@/store/snapshotStore'
 
 type ListEntry = { id: string; name: string; updatedAt: number }
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -228,6 +229,8 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     await deleteResume(id)
     // 清孤儿对话快照（含整份 resume 深拷贝，释放内存）
     try { useChatStore.getState().deleteForResume(id) } catch { /* ignore */ }
+    // 级联清理该简历的命名版本快照（同上，避免孤儿 + 释放内存）
+    try { useSnapshotStore.getState().deleteForResume(id) } catch { /* ignore */ }
     const list = get().list.filter((e) => e.id !== id)
     let current = get().current
     if (current?.id === id) {

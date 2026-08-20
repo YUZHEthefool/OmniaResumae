@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { useChatStore } from '@/store/chatStore'
+import { useSnapshotStore } from '@/store/snapshotStore'
 import { t } from '@/i18n'
 import '@/templates' // 触发模板自注册（必须在渲染前）
 import { getTemplate } from '@/templates/registry'
@@ -74,6 +75,8 @@ export default function App() {
     void init()
     // 对话历史从 Dexie 加载（不阻塞渲染：CopilotPanel 默认收起，点开时早完成）
     void useChatStore.getState().init()
+    // 简历快照从 Dexie 加载（不阻塞渲染：SnapshotDialog 打开时早完成）
+    void useSnapshotStore.getState().init()
   }, [init])
 
   // 全局快捷键：Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 或 Ctrl+Y 重做、Ctrl/Cmd+S 强制保存。

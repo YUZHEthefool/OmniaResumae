@@ -11,7 +11,7 @@
  *
  * 密钥策略：密钥是敏感凭据，备份默认不含；用户显式勾选才含（谨慎分享）。
  */
-import { db, listResumes, listConversations } from '@/db'
+import { db, listResumes, listConversations, listAllSnapshots } from '@/db'
 
 const BACKUP_VERSION = 1
 
@@ -26,6 +26,7 @@ interface BackupPayload {
   exportedAt: string
   resumes: unknown[]
   conversations: unknown[]
+  snapshots: unknown[]
   templates: unknown
   skills: unknown
   settings?: unknown
@@ -41,11 +42,13 @@ function readLS(key: string): unknown {
 export async function exportBackup(includeKeys: boolean): Promise<void> {
   const resumes = await listResumes()
   const conversations = await listConversations()
+  const snapshots = await listAllSnapshots()
   const payload: BackupPayload = {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     resumes,
     conversations,
+    snapshots,
     templates: readLS(LS_KEYS.templates),
     skills: readLS(LS_KEYS.skills),
   }
@@ -77,9 +80,10 @@ export async function importBackup(file: File, importKeys: boolean): Promise<voi
   }
   if (!data || data.version !== BACKUP_VERSION) throw new Error('restoreInvalid')
 
-  // Dexie 两表：bulkPut 按 id 合并（同 id 覆盖、新 id 插入），不删现有未在备份中的记录。
+  // Dexie 三表：bulkPut 按 id 合并（同 id 覆盖、新 id 插入），不删现有未在备份中的记录。
   if (Array.isArray(data.resumes) && data.resumes.length) await db.resumes.bulkPut(data.resumes as never[])
   if (Array.isArray(data.conversations) && data.conversations.length) await db.conversations.bulkPut(data.conversations as never[])
+  if (Array.isArray(data.snapshots) && data.snapshots.length) await db.snapshots.bulkPut(data.snapshots as never[])
 
   // localStorage 三个 store：直接写回整个 persist 对象，刷新后 zustand rehydrate。
   if (data.templates != null) localStorage.setItem(LS_KEYS.templates, JSON.stringify(data.templates))

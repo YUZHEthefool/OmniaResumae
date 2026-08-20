@@ -189,6 +189,16 @@ export interface Resume {
   updatedAt: number
 }
 
+/** 简历快照（命名版本）：某份简历在某个时点的完整深拷贝，用于多版本投递管理。
+ *  不进 resumes 表（避免污染顶栏简历下拉），独立存 snapshots 表。恢复 = 用快照内容覆盖当前简历。 */
+export interface Snapshot {
+  id: string // uid('snap')
+  resumeId: string // 所属简历 id（恢复时仍指向该简历）
+  name: string // 用户命名，如「投 A 公司版」
+  resume: Resume // 完整深拷贝（capture 时点，不可变）
+  createdAt: number
+}
+
 /* ───────── 渲染期辅助：按 locale 取本地化文本 ───────── */
 /** 取本地化字符串；当前 locale 缺失时回退另一语言，再缺失返回 fallback（默认空串） */
 export function pick(value: Localized | undefined, locale: Locale, fallback = ''): string {

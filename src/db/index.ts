@@ -5,11 +5,13 @@
  */
 import Dexie, { type Table } from 'dexie'
 import type { Resume } from '@/types/resume'
+import type { Snapshot } from '@/types/resume'
 import type { ChatConversation } from '@/store/chatStore'
 
 export class ResumeDB extends Dexie {
   resumes!: Table<Resume, string>
   conversations!: Table<ChatConversation, string>
+  snapshots!: Table<Snapshot, string>
 
   constructor() {
     super('omniaresumae')
@@ -20,6 +22,12 @@ export class ResumeDB extends Dexie {
     this.version(2).stores({
       resumes: 'id, updatedAt',
       conversations: 'id, resumeId, updatedAt',
+    })
+    // v3: 加 snapshots 表（简历命名版本，独立于 resumes，不污染顶栏简历下拉）
+    this.version(3).stores({
+      resumes: 'id, updatedAt',
+      conversations: 'id, resumeId, updatedAt',
+      snapshots: 'id, resumeId, createdAt',
     })
   }
 }
@@ -57,5 +65,22 @@ export async function deleteConversationRow(id: string): Promise<void> {
 
 export async function deleteConversationsByResume(resumeId: string): Promise<void> {
   await db.conversations.where('resumeId').equals(resumeId).delete()
+}
+
+/* ─── snapshots（简历命名版本） ─── */
+export async function listSnapshotsByResume(resumeId: string): Promise<Snapshot[]> {
+  return db.snapshots.where('resumeId').equals(resumeId).reverse().sortBy('createdAt')
+}
+export async function listAllSnapshots(): Promise<Snapshot[]> {
+  return db.snapshots.toArray()
+}
+export async function putSnapshot(s: Snapshot): Promise<void> {
+  await db.snapshots.put(s)
+}
+export async function deleteSnapshotRow(id: string): Promise<void> {
+  await db.snapshots.delete(id)
+}
+export async function deleteSnapshotsByResume(resumeId: string): Promise<void> {
+  await db.snapshots.where('resumeId').equals(resumeId).delete()
 }
 
