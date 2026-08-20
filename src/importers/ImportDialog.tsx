@@ -6,7 +6,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { clsx } from 'clsx'
-import type { Resume } from '@/types/resume'
+import type { Resume, Basics } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -17,6 +17,55 @@ import { parseResumeJSON } from './json'
 import { structureViaAI } from '@/ai/aiStructure'
 
 type Source = 'markdown' | 'latex' | 'pdf' | 'paste' | 'json'
+
+/* ─── basics 合并助手 ───
+ * 导入合并的几类数据丢失都源于 spread 对"空值"的处理：
+ * - replace 模式旧用 `??` 回填，但 ?? 只挡 null/undefined，挡不住空字符串/空 Localized——
+ *   AI 结构化经 normalizeToResume 总会给出 name: {zh:'',en:''}（非 undefined），直接覆盖用户姓名。
+ * - append 模式旧写 `{...aiResume.basics, ...d.basics}`，空简历的空字符串 basics 在后 spread，
+ *   覆盖 AI 提取的 email/phone/label/summary/location（默认 append，主流程失效）。
+ * - 启发式 frag append 旧写 `{...d.basics, ...frag.basics}`，frag 在后覆盖用户已有 basics。
+ * 统一用"空视为未提供"语义合并，按 prefer 方向决定谁优先。
+ */
+function basicsFieldEmpty(v: unknown): boolean {
+  if (v == null) return true
+  if (typeof v === 'string') return !v.trim()
+  if (Array.isArray(v)) return v.length === 0
+  if (typeof v === 'object') {
+    const o = v as { zh?: string; en?: string }
+    if ('zh' in o || 'en' in o) return !(o.zh && o.zh.trim()) && !(o.en && o.en.trim())
+  }
+  return false
+}
+
+const BASICS_SCALAR_KEYS = ['name', 'label', 'email', 'phone', 'url', 'location', 'summary', 'nameRomanized'] as const
+
+/**
+ * 合并两份 basics。prefer='source'：source 非空才覆盖 target（空保留 target，用于 replace）；
+ * prefer='target'：target 非空保留，空则用 source 补（用于 append）。profiles/image 同理。
+ * source 取 Partial<Basics> 以兼容 AI 产出的完整 Basics 与启发式片段的部分 basics。
+ */
+function mergeBasics(target: Basics, source: Partial<Basics> | undefined, prefer: 'source' | 'target'): Basics {
+  if (!source) return target
+  const out: Basics = { ...target }
+  const sout = source as unknown as Record<string, unknown>
+  const tout = out as unknown as Record<string, unknown>
+  for (const k of BASICS_SCALAR_KEYS) {
+    const sv = sout[k]
+    const tv = tout[k]
+    const sEmpty = basicsFieldEmpty(sv)
+    const tEmpty = basicsFieldEmpty(tv)
+    if (prefer === 'source') { if (!sEmpty) tout[k] = sv }
+    else { if (tEmpty && !sEmpty) tout[k] = sv }
+  }
+  if (source.profiles && source.profiles.length) {
+    if (prefer === 'source' || !out.profiles?.length) out.profiles = source.profiles
+  }
+  if (!basicsFieldEmpty(source.image)) {
+    if (prefer === 'source' || basicsFieldEmpty(out.image)) out.image = source.image
+  }
+  return out
+}
 
 export function ImportDialog({ initialFile, onClose }: { initialFile?: File | null; onClose: () => void }) {
   const [source, setSource] = useState<Source>('markdown')
@@ -143,31 +192,17 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
     if (!aiResume && !frag) return
     merge((d) => {
       if (aiResume) {
-        // AI/JSON 结构化：整份覆盖或追加
+        // AI/JSON 结构化：整份覆盖或追加。basics 用"空视为未提供"合并——replace 时 AI 非空才覆盖
+        // （识别失败的字段不擦除用户已有值；旧 ?? 回填对空字符串/空 Localized 无效，name 常被空覆盖），
+        // append 时用户非空保留、空用 AI 补（旧 {...aiResume.basics, ...d.basics} 让空简历的空字符串
+        // 覆盖 AI 提取的 email/phone 等，默认 append 主流程失效）。
         if (mode === 'replace') {
-          // 保留 AI/JSON 产物无法承载的字段：profiles / image / nameRomanized，
-          // 以及未被覆盖的现有段（matches/domains/workflow/community 等扩展段 AI 罕见产出）。
-          // 注意：aiResume.basics 的可选字段经 normalizeToResume 会显式为 undefined（key 存在），
-          // 直接 spread 会用 undefined 覆盖用户已有值——故 label/email/phone/url/location/summary
-          // 也必须显式 ?? 回填，否则导入没写这些字段的备份/AI 会静默擦除用户邮箱/电话/头衔。
-          d.basics = {
-            ...aiResume.basics,
-            label: aiResume.basics.label ?? d.basics.label,
-            email: aiResume.basics.email ?? d.basics.email,
-            phone: aiResume.basics.phone ?? d.basics.phone,
-            url: aiResume.basics.url ?? d.basics.url,
-            location: aiResume.basics.location ?? d.basics.location,
-            summary: aiResume.basics.summary ?? d.basics.summary,
-            profiles: aiResume.basics.profiles ?? d.basics.profiles,
-            image: aiResume.basics.image ?? d.basics.image,
-            nameRomanized: aiResume.basics.nameRomanized ?? d.basics.nameRomanized,
-          }
+          d.basics = mergeBasics(d.basics, aiResume.basics, 'source')
           // custom 段按 title 匹配/清理（多个 custom 段 title 不同，按 type 一锅端会误删/错位）
           const aiKeys = new Set(aiResume.sections.map(sectionKey))
           d.sections = [...aiResume.sections, ...d.sections.filter((s) => !aiKeys.has(sectionKey(s)))]
         } else {
-          // append：追加 sections，basics 字段缺失才补
-          d.basics = { ...aiResume.basics, ...d.basics }
+          d.basics = mergeBasics(d.basics, aiResume.basics, 'target')
           for (const s of aiResume.sections) {
             const exist = d.sections.find((x) => sectionKey(x) === sectionKey(s))
             if (exist) exist.items.push(...(s.items as never[]))
@@ -177,12 +212,13 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
       } else if (frag) {
         // 启发式片段：replace 时清空被覆盖的同 key 段再写入，避免残留旧条目
         if (mode === 'replace') {
-          if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
+          d.basics = mergeBasics(d.basics, frag.basics, 'source')
           const fragKeys = new Set(frag.sections.map(sectionKey))
           d.sections = d.sections.filter((s) => !fragKeys.has(sectionKey(s)))
           for (const s of frag.sections) d.sections.push(s as never)
         } else {
-          if (frag.basics) d.basics = { ...d.basics, ...frag.basics }
+          // append：保留用户 basics，仅补缺失（旧 {...d.basics, ...frag.basics} 让 frag 覆盖用户姓名/邮箱）
+          d.basics = mergeBasics(d.basics, frag.basics, 'target')
           for (const s of frag.sections) {
             const exist = d.sections.find((x) => sectionKey(x) === sectionKey(s))
             if (exist) exist.items.push(...(s.items as never[]))
