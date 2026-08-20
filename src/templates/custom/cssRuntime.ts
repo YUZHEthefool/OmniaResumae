@@ -29,6 +29,11 @@ export function sanitizeCSS(raw: string): string {
   s = s.replace(/-moz-binding\s*:/gi, '/* -moz-binding: */')
   // 仅匹配作为属性名的 behavior:（前面不是字母/连字符），避免误伤 scroll-behavior / transition-behavior
   s = s.replace(/(?<![a-z-])behavior\s*:/gi, '/* behavior: */')
+  // 4. 剥 </style 序列：<style> 是 raw-text 元素，textContent 里的 </style> 在 outerHTML 序列化时
+  //    会提前结束 <style>，使导出的 HTML/Word/打印样式被截断、后续 CSS 泄漏为可见文本。
+  //    把 </style 转成 <\/style：CSS 解析器把 \/ 还原为 /（CSS 行为不变），但 HTML 序列化器不再认为是结束标签。
+  //    （连注释里的 </style> 也覆盖——CSS 注释 /* ... </style> ... */ 中的序列同样会截断序列化。）
+  s = s.replace(/<\/style/gi, '<\\/style')
   return s
 }
 
