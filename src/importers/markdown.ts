@@ -71,9 +71,10 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
       const p = tok as Tokens.Paragraph
       const raw = p.text.trim() // 原始文本用于日期/链接正则
       const text = inlineText(p.tokens).trim() // 剥内联语法后的纯文本用于存储
-      // contact block（LapisCV 用 blockquote，但有时是普通段落）：任一联系方式缺失就尝试，
-      // 只补缺失字段，避免联系方式分散在多段时后段被跳过丢失
-      if (!frag.basics || !frag.basics.email || !frag.basics.phone || !frag.basics.url) {
+      // contact block（LapisCV 用 blockquote，但有时是普通段落）：仅在尚未进入任何 section 时尝试
+      // （顶层联系方式区）。进入 section 后段落是内容——旧实现无 !currentSection 守卫，项目描述里
+      // 含 URL/email/phone 的段落会被 extractContact 吞掉设成 basics.url 等，并 continue 丢失整段描述。
+      if (!currentSection && (!frag.basics || !frag.basics.email || !frag.basics.phone || !frag.basics.url)) {
         const contact = extractContact(raw)
         if (contact) {
           frag.basics = {
@@ -110,8 +111,11 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
           continue
         }
       }
-      // 顶层 paragraph → summary
-      if (text) frag.basics = { ...frag.basics, summary: localize(text, langHint) }
+      // 顶层 paragraph → summary（多段用 \n 累积，旧实现每段覆盖仅留最后一段）
+      if (text) {
+        const prev = (frag.basics?.summary as Localized | undefined)?.[langHint] ?? ''
+        frag.basics = { ...frag.basics, summary: { ...(frag.basics?.summary ?? {}), [langHint]: prev ? `${prev}\n${text}` : text } }
+      }
     } else if (tok.type === 'list') {
       const list = tok as Tokens.List
       if (!currentSection) continue
