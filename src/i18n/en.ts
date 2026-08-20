@@ -30,6 +30,8 @@ export const en: Dict = {
   confirmDeleteResume: 'Delete resume "{name}"? This cannot be undone.',
   exportMarkdown: 'Export Markdown',
   exportJsonResume: 'Export JSON Resume',
+  exportPlainText: 'Copy plain text (for web forms)',
+  copied: 'Copied to clipboard',
 
   basics: 'Basics',
   basicsName: 'Name',

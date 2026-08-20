@@ -10,10 +10,12 @@ import { useUIStore } from '@/store/uiStore'
 import { listTemplates, unregisterTemplate } from '@/templates/registry'
 import { exportPDF, printResume, exportImage } from '@/export/pdf'
 import { resumeToMarkdown } from '@/export/markdown'
+import { resumeToPlainText } from '@/export/plaintext'
 import { resumeToJsonResume } from '@/export/jsonResume'
 import { exportHTML } from '@/export/html'
 import { exportDocx } from '@/export/docx'
 import { exportBackup, importBackup } from '@/export/backup'
+import { copyText } from '@/utils/clipboard'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
 import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
@@ -173,6 +175,12 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     a.download = `${slugify(current.name) || 'resume'}.md`
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  const doCopyPlainText = async () => {
+    if (!current) return
+    setMenu(null)
+    const ok = await copyText(resumeToPlainText(current, locale))
+    alert(ok ? t('copied', locale) : t('exportFailed', locale))
   }
   const doExportJsonResume = () => {
     if (!current) return
@@ -378,6 +386,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportMarkdown}>
               {t('exportMarkdown', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doCopyPlainText}>
+              {t('exportPlainText', locale)}
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJsonResume}>
               {t('exportJsonResume', locale)}

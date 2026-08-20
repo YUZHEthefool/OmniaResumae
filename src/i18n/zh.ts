@@ -29,6 +29,8 @@ export const zh = {
   confirmDeleteResume: '确定删除简历「{name}」？此操作不可撤销。',
   exportMarkdown: '导出 Markdown',
   exportJsonResume: '导出 JSON Resume',
+  exportPlainText: '复制纯文本（贴网申）',
+  copied: '已复制到剪贴板',
 
   // 编辑面板
   basics: '基本信息',
