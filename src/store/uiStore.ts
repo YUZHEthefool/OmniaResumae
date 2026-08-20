@@ -81,7 +81,12 @@ export const useUIStore = create<UIState>()(
     {
       name: 'omniaresumae-ui',
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ theme: s.theme }),
+      // theme 必持久化（驱动 <html> dark 类）；locale/zoom/panelRatio 是用户偏好，
+      // 旧版只持久化 theme 致使英文用户每次刷新弹回中文、缩放/分栏比例丢失——一并持久化。
+      // templateId 不在此持久：它镜像到 resume.templateId，由 App.subscribe 从简历重水合
+      // （避免双写不一致）。importFile 是 File 不可序列化，排除（本就不该跨会话）。
+      // copilotOpen 不持久：每次启动默认收起，避免无意占屏。
+      partialize: (s) => ({ theme: s.theme, locale: s.locale, zoom: s.zoom, panelRatio: s.panelRatio }),
       onRehydrateStorage: () => (state) => {
         if (state) applyTheme(state.theme)
       },
