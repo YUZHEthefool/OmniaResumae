@@ -110,15 +110,14 @@ function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; loca
   const e = item as EducationItem
   const date = fmtDateRange(item.startDate, item.endDate, locale)
   const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  const primary = edu ? L(e.institution, locale) : L(w.position, locale)
+  const secondary = edu ? L(e.studyType, locale) : L(w.name, locale)
   return (
     <div className="entry">
       <div className="entry-head">
         <div>
-          <span className="entry-title">
-            {edu ? L(e.institution, locale) : L(w.position, locale)}
-          </span>
-          {!edu && L(w.name, locale) && <span className="entry-org"> · {L(w.name, locale)}</span>}
-          {edu && L(e.studyType, locale) && <span className="entry-org"> · {L(e.studyType, locale)}</span>}
+          <span className="entry-title">{primary}</span>
+          {secondary && <span className="entry-org">{primary ? ' · ' : ''}{secondary}</span>}
         </div>
         {date && <span className="entry-date">{date}</span>}
       </div>

@@ -130,13 +130,14 @@ function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: 
   const w = item as WorkItem; const e = item as EducationItem
   const date = fmtDateRange(item.startDate, item.endDate, locale)
   const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  const primary = edu ? L(e.institution, locale) : L(w.position, locale)
+  const secondary = edu ? L(e.studyType, locale) : L(w.name, locale)
   return (
     <div className="entry">
       <div className="entry-head">
         <span className="entry-title">
-          {edu ? L(e.institution, locale) : L(w.position, locale)}
-          {!edu && L(w.name, locale) ? <span className="entry-org"> · {L(w.name, locale)}</span> : null}
-          {edu && L(e.studyType, locale) ? <span className="entry-org"> · {L(e.studyType, locale)}</span> : null}
+          {primary}
+          {secondary ? <span className="entry-org">{primary ? ' · ' : ''}{secondary}</span> : null}
         </span>
         {date && <span className="entry-date">{date}</span>}
       </div>
