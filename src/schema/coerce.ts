@@ -45,6 +45,25 @@ export function coerceHighlights(v: unknown, locale: Locale, prev: Localized[] =
 }
 
 /**
+ * 把 Localized[] 字段（如 courses）强制为安全形态：对象取 zh/en，字符串按当前语种写入并按索引
+ * 回填旧值另一语言，其余元素丢弃。与 coerceHighlights 同构，但丢弃无效元素而非保留空对象
+ * （课程列表里空占位无意义）。修复：courses 在 schema 里是 Localized[]（validate.ts:55），
+ * 旧实现把它与 keywords/languages（string[]）混在一起仅兜底成数组，模型传 ["数据结构","算法"]
+ * 这种自然形态会原样保留字符串 → EducationItemSchema.safeParse 元素非对象失败 → 整条教育条目
+ * 被 validateAIResume 丢弃（institution/area/dates/highlights 全丢，静默数据丢失）。
+ */
+export function coerceLocArray(v: unknown, locale: Locale, prev: Localized[] = []): Localized[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .map((c, i): Localized | null => {
+      if (isLocalized(c)) return { zh: c.zh, en: c.en }
+      if (typeof c === 'string' && c.trim()) return { ...(prev[i] ?? {}), [locale]: c } as Localized
+      return prev[i] ?? null
+    })
+    .filter((c): c is Localized => !!c)
+}
+
+/**
  * 把 AI/导入的松散条目规范化为某 type 的安全形态（不含 id，由调用方补）：
  * - LOC_ITEM_KEYS 标量字段：对象/字符串转为 {zh,en}（字符串按当前语种）
  * - highlights：coerceHighlights（始终返回数组，绝不 undefined）
@@ -60,8 +79,12 @@ export function coerceItem(type: string, item: Record<string, unknown>, locale: 
       if (c) out[k] = c
     } else if (k === 'highlights') {
       out[k] = coerceHighlights(v, locale)
-    } else if (k === 'keywords' || k === 'languages' || k === 'courses') {
-      // 这些字段运行时按数组用（模板 .join / .map）；模型若误传字符串会原样写入致渲染崩溃，兜底成数组
+    } else if (k === 'courses') {
+      // courses 是 Localized[]（非 keywords/languages 的 string[]）：强制每元素为 Localized，
+      // 否则模型传字符串数组会导致 EducationItemSchema 校验失败、整条教育条目被丢弃。
+      out[k] = coerceLocArray(v, locale)
+    } else if (k === 'keywords' || k === 'languages') {
+      // 这两字段运行时按 string[] 用（模板 .join / .map）；模型若误传非数组会原样写入致渲染崩溃，兜底成数组
       out[k] = Array.isArray(v) ? v : []
     } else {
       out[k] = v

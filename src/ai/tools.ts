@@ -8,7 +8,7 @@
 import type { ToolDef } from './agent'
 import { useResumeStore } from '@/store/resumeStore'
 import { uid, SECTION_TITLE_PRESETS } from '@/schema/defaults'
-import { isLocalized, mergeLoc, coerceHighlights, coerceItem, LOC_BASICS_KEYS, LOC_ITEM_KEYS } from '@/schema/coerce'
+import { isLocalized, mergeLoc, coerceHighlights, coerceLocArray, coerceItem, LOC_BASICS_KEYS, LOC_ITEM_KEYS } from '@/schema/coerce'
 import type { Locale, Localized, Resume, SectionType } from '@/types/resume'
 import type { Skill } from '@/skills/types'
 import { listMyRepos, getRepoByName, getRepoDetail } from '@/github/client'
@@ -308,8 +308,12 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
               else if (typeof v === 'string') it[k] = mergeLoc(it[k] as Localized | undefined, { [locale]: v } as Localized)
             } else if (k === 'highlights') {
               it[k] = coerceHighlights(v, locale, (it[k] as Localized[]) ?? [])
-            } else if (k === 'keywords' || k === 'languages' || k === 'courses') {
-              // 这三字段运行时按数组用（模板 .join/.map）；模型若误传逗号字符串会原样写入致
+            } else if (k === 'courses') {
+              // courses 是 Localized[]（非 keywords/languages 的 string[]）：强制每元素为 Localized，
+              // 否则模型传字符串数组会落库脏数据（jsonResume 导出空白）。按索引回填旧值另一语言。
+              it[k] = coerceLocArray(v, locale, (it[k] as Localized[]) ?? [])
+            } else if (k === 'keywords' || k === 'languages') {
+              // 这两字段运行时按 string[] 用（模板 .join/.map）；模型若误传逗号字符串会原样写入致
               // (... ?? []).join() 对字符串求值不回退 → TypeError 崩全应用。兜底成数组（同 coerceItem）。
               it[k] = Array.isArray(v) ? v : []
             } else {
