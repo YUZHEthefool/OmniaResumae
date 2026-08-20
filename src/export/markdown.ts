@@ -98,10 +98,16 @@ function sectionToMd(s: Section, loc: Locale): string {
     case 'workflow':
       return (s.items as WorkflowStep[]).map((w, i) => `${i + 1}. **${L(w.label, loc)}**：${L(w.text, loc)}`).join('\n')
     case 'community':
-      return (s.items as CommunityItem[]).map((c) => `- **${c.platform}** @${c.handle} — ${c.url}`).join('\n')
+      // url 空时不加尾随分隔符，避免 "- **X** @y — " 的悬空破折号
+      return (s.items as CommunityItem[]).map((c) => `- **${c.platform}** @${c.handle}${c.url ? ` — ${c.url}` : ''}`).join('\n')
     case 'custom':
+      // 与 CustomTemplate 渲染一致：字符串原样、Localized 取值、其余 String() 化（数字/布尔不再丢失）
       return (s.items as Record<string, unknown>[]).map((it) =>
-        Object.entries(it).filter(([k]) => k !== 'id').map(([k, v]) => `- **${k}**：${typeof v === 'string' ? v : L(v as Localized, loc)}`).join('\n'),
+        Object.entries(it).filter(([k]) => k !== 'id').map(([k, v]) => {
+          if (typeof v === 'string') return `- **${k}**：${v}`
+          if (v && typeof v === 'object' && ('zh' in v || 'en' in v)) return `- **${k}**：${L(v as Localized, loc)}`
+          return `- **${k}**：${String(v ?? '')}`
+        }).join('\n'),
       ).join('\n')
     default:
       return ''
