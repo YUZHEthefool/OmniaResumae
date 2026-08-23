@@ -15,6 +15,7 @@ import { resumeToJsonResume } from '@/export/jsonResume'
 import { exportHTML } from '@/export/html'
 import { exportDocx } from '@/export/docx'
 import { exportBackup, importBackup } from '@/export/backup'
+import { encodeResumeToHash, shareUrlFromHash } from '@/utils/shareLink'
 import { copyText } from '@/utils/clipboard'
 import { ImportDialog } from '@/importers/ImportDialog'
 import { GitHubImportDialog } from '@/github/GitHubImportDialog'
@@ -194,6 +195,17 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
     a.download = `${slugify(current.name) || 'resume'}.jsonresume.json`
     a.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+  const doShareLink = async () => {
+    if (!current) return
+    setMenu(null)
+    try {
+      const url = shareUrlFromHash(await encodeResumeToHash(current))
+      const ok = await copyText(url)
+      alert(ok ? t('shareCopied', locale) : t('exportFailed', locale))
+    } catch {
+      alert(t('shareEncodeErr', locale))
+    }
   }
 
   return (
@@ -396,6 +408,9 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
             </button>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doExportJsonResume}>
               {t('exportJsonResume', locale)}
+            </button>
+            <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doShareLink}>
+              {t('shareLink', locale)}
             </button>
             <div className="border-t border-chrome-border my-1" />
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={doPrint}>

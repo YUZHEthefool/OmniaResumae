@@ -95,6 +95,7 @@ interface ResumeState {
   remove: (id: string) => Promise<void>
   rename: (id: string, name: string) => Promise<void>
   duplicate: (id?: string) => Promise<string | undefined>
+  createFromResume: (resume: Resume, name?: string) => Promise<string>
   // 编辑
   update: (fn: (draft: Resume) => void) => void
   addSection: (type: SectionType, layout: Layout) => void
@@ -271,6 +272,23 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
     const copy = structuredClone(src) as Resume
     copy.id = uid('resume')
     copy.name = `${src.name} 副本`
+    const t = nowStamp()
+    copy.createdAt = t
+    copy.updatedAt = t
+    await putResume(copy)
+    lastEditMs = 0
+    set({ current: copy, list: [toEntry(copy), ...get().list], past: [], future: [] })
+    notify({ type: 'list' })
+    return copy.id
+  },
+
+  /** 由一份现成简历（AI 生成 / 分享链接导入）创建新简历：深拷贝、换新 id、命名、落盘、切为 current。
+   *  与 duplicate 区别：duplicate 复制 store 内已有简历；createFromResume 接收外部 Resume 对象。 */
+  async createFromResume(resume, name) {
+    await flushSave()
+    const copy = structuredClone(resume) as Resume
+    copy.id = uid('resume')
+    copy.name = name ?? copy.name
     const t = nowStamp()
     copy.createdAt = t
     copy.updatedAt = t

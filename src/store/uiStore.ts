@@ -8,7 +8,7 @@
  */
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { Locale } from '@/types/resume'
+import type { Locale, Resume } from '@/types/resume'
 import { useResumeStore } from '@/store/resumeStore'
 
 export type Theme = 'light' | 'dark'
@@ -23,6 +23,7 @@ interface UIState {
   importOpen: boolean // 导入对话框是否打开（由顶栏按钮或拖拽文件触发）
   importFile: File | null // 拖拽带入、待 ImportDialog 消费的文件
   presentMode: boolean // 全屏预览/演示：隐藏编辑器与顶栏，预览占满屏
+  sharedResume: Resume | null // 只读分享视图：从 #r= 解码的简历，非 null 时 App 渲染 SharedView 而非编辑器
   setLocale: (l: Locale) => void
   setTemplate: (id: string) => void
   /** 仅写 uiStore.templateId（不镜像）——供 App 从 resume.templateId 重水合用 */
@@ -35,6 +36,7 @@ interface UIState {
   setImportOpen: (v: boolean) => void
   setImportFile: (f: File | null) => void
   setPresentMode: (v: boolean) => void
+  setSharedResume: (r: Resume | null) => void
 }
 
 /** 把 theme 同步到 <html> 的 dark 类 */
@@ -55,6 +57,7 @@ export const useUIStore = create<UIState>()(
       importOpen: false,
       importFile: null,
       presentMode: false,
+      sharedResume: null,
       setLocale: (locale) => set({ locale }),
       setTemplate: (templateId) => {
         set({ templateId })
@@ -81,6 +84,7 @@ export const useUIStore = create<UIState>()(
       setImportOpen: (importOpen) => set({ importOpen }),
       setImportFile: (importFile) => set({ importFile }),
       setPresentMode: (presentMode) => set({ presentMode }),
+      setSharedResume: (sharedResume) => set({ sharedResume }),
     }),
     {
       name: 'omniaresumae-ui',

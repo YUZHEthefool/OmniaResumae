@@ -15,6 +15,8 @@ import { SplitPane } from '@/components/chrome/SplitPane'
 import { EditorPanel } from '@/components/editor/EditorPanel'
 import { PreviewPane } from '@/components/preview/PreviewPane'
 import { CopilotPanel } from '@/ai/CopilotPanel'
+import { SharedView } from '@/components/SharedView'
+import { decodeResumeFromHash } from '@/utils/shareLink'
 
 /** 全局拖拽文件导入：拖文件到页面任意位置即弹出导入对话框并自动加载该文件。 */
 function DropZone() {
@@ -57,8 +59,29 @@ export default function App() {
   const loaded = useResumeStore((s) => s.loaded)
   const copilotOpen = useUIStore((s) => s.copilotOpen)
   const presentMode = useUIStore((s) => s.presentMode)
+  const sharedResume = useUIStore((s) => s.sharedResume)
+  const setSharedResume = useUIStore((s) => s.setSharedResume)
   const locale = useUIStore((s) => s.locale)
   const previewRef = useRef<HTMLDivElement>(null)
+
+  // 只读分享链接：#r=<压缩简历>。有 hash 时解码前先卡在 loading（避免闪过编辑器），
+  // 解码成功 → setSharedResume 渲染 SharedView；失败 → 错误页。无 hash 立即放行。
+  const [shareChecked, setShareChecked] = useState(() => !location.hash.slice(1).startsWith('r='))
+  const [shareErr, setShareErr] = useState(false)
+  useEffect(() => {
+    const hash = location.hash.slice(1)
+    if (!hash.startsWith('r=')) return
+    void (async () => {
+      try {
+        setSharedResume(await decodeResumeFromHash(hash))
+      } catch (e) {
+        console.error('[share] decode failed', e)
+        setShareErr(true)
+      } finally {
+        setShareChecked(true)
+      }
+    })()
+  }, [setSharedResume])
 
   // 选中模板随简历走、跨刷新保持：current 变化时（init 载入 / 切简历 / 内容更新）
   // 从 resume.templateId 重水合 uiStore.templateId，未注册的 id 回退 serif-classic。
@@ -109,12 +132,32 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  if (!loaded) {
+  if (!loaded || !shareChecked) {
     return (
       <div className="h-full flex items-center justify-center text-chrome-muted text-sm">
         {t('loading', locale)}
       </div>
     )
+  }
+
+  // 分享链接解码失败：提示并回到编辑器
+  if (shareErr) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 text-chrome-muted text-sm">
+        <div>{t('sharedInvalid', locale)}</div>
+        <button
+          className="px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-chrome-bg rounded"
+          onClick={() => { history.replaceState(null, '', location.pathname); setShareErr(false) }}
+        >
+          {t('sharedViewEdit', locale)}
+        </button>
+      </div>
+    )
+  }
+
+  // 只读分享视图：渲染解码出的简历，不进编辑器
+  if (sharedResume) {
+    return <SharedView />
   }
 
   // 全屏预览/演示模式：隐藏顶栏与编辑器，预览占满，浮动按钮退出（Esc 同样退出）
