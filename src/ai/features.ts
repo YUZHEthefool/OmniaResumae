@@ -192,6 +192,8 @@ function resumeDigest(resume: Resume, locale: Locale): string {
       const date = [o.startDate as string, o.endDate as string].filter(Boolean).join('-')
       const hl = (o.highlights as Localized[] | undefined) ?? []
       const hlText = hl.map((h) => pick(h, locale)).filter(Boolean).join('；')
+      // 无标题、无日期、无要点的条目（如 custom 段的 k/v 条目）不发出空 "- " 行污染 AI 上下文
+      if (!head && !date && !hlText) return
       lines.push(`- ${head}${date ? ` (${date})` : ''}${hlText ? `：${hlText}` : ''}`)
     })
   }
