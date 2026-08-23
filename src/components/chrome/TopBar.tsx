@@ -196,7 +196,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   }
 
   return (
-    <div ref={barRef} className="flex items-center gap-1 px-3 h-12 bg-chrome-panel border-b border-chrome-border text-chrome-ink">
+    <div ref={barRef} className="flex items-center gap-1 px-3 h-12 bg-chrome-panel border-b border-chrome-border text-chrome-ink overflow-x-auto min-w-0 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
       {/* 品牌 */}
       <div className="font-bold tracking-tight mr-2 select-none">
         Omnia<span className="text-chrome-muted">Resumae</span>
