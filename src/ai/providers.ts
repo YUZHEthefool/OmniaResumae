@@ -256,23 +256,30 @@ function toAnthropicContent(content: ChatMessage['content']): unknown {
 
 /* ───────── OpenAI 兼容 ───────── */
 async function chatOpenAICompatible(config: AIProviderConfig, opts: ChatOptions): Promise<string> {
-  const body: Record<string, unknown> = {
-    model: config.model,
-    messages: opts.messages.map((m) => ({ role: m.role, content: toOpenAIContent(m.content) })),
-    temperature: opts.temperature ?? 0.4,
-    stream: false,
+  const buildBody = (json: boolean): Record<string, unknown> => {
+    const b: Record<string, unknown> = {
+      model: config.model,
+      messages: opts.messages.map((m) => ({ role: m.role, content: toOpenAIContent(m.content) })),
+      temperature: opts.temperature ?? 0.4,
+      stream: false,
+    }
+    if (json) b.response_format = { type: 'json_object' }
+    return b
   }
-  if (opts.json) body.response_format = { type: 'json_object' }
+  const doFetch = (body: Record<string, unknown>) =>
+    fetch(`${trimSlash(config.baseURL)}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify(body),
+      signal: opts.signal,
+    })
 
-  const res = await fetch(`${trimSlash(config.baseURL)}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify(body),
-    signal: opts.signal,
-  })
+  let res = await doFetch(buildBody(!!opts.json))
+  // 部分端点/模型（如某些通义 Qwen-turbo、旧版）不支持 response_format，对 json_object 报 400。
+  // 此时去掉 response_format 重试一次——system prompt 已强制"只输出 JSON"，extractJSON 容错解析。
+  if (!res.ok && res.status === 400 && opts.json) {
+    res = await doFetch(buildBody(false))
+  }
   if (!res.ok) {
     const err = await res.text().catch(() => res.statusText)
     throw new Error(`API ${res.status}: ${err.slice(0, 200)}`)
