@@ -14,8 +14,8 @@ import { checkResume, type IssueSeverity } from '@/utils/healthCheck'
 import { t, type UIKey } from '@/i18n'
 
 const SEV_STYLE: Record<IssueSeverity, { color: string; bg: string; Icon: typeof AlertCircle; label: UIKey }> = {
-  critical: { color: 'text-red-600', bg: 'bg-red-50 border-red-200', Icon: AlertCircle, label: 'hcCritical' },
-  warn: { color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200', Icon: AlertTriangle, label: 'hcWarn' },
+  critical: { color: 'text-red-600', bg: 'bg-red-500/10 border-red-500/30', Icon: AlertCircle, label: 'hcCritical' },
+  warn: { color: 'text-amber-600', bg: 'bg-amber-500/10 border-amber-500/30', Icon: AlertTriangle, label: 'hcWarn' },
   info: { color: 'text-chrome-muted', bg: 'bg-chrome-bg border-chrome-border', Icon: Info, label: 'hcInfo' },
 }
 
