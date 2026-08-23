@@ -25,7 +25,7 @@ import { SnapshotDialog } from '@/components/dialogs/SnapshotDialog'
 import { useTemplateStore } from '@/store/templateStore'
 import { slugify } from '@/utils/slug'
 import { t } from '@/i18n'
-import { Github, Sparkles, Sun, Moon, Undo2, Redo2, HeartPulse, Camera } from 'lucide-react'
+import { Github, Sparkles, Sun, Moon, Undo2, Redo2, HeartPulse, Camera, Maximize2 } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -42,6 +42,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const setImportOpen = useUIStore((s) => s.setImportOpen)
   const importFile = useUIStore((s) => s.importFile)
   const setImportFile = useUIStore((s) => s.setImportFile)
+  const setPresentMode = useUIStore((s) => s.setPresentMode)
 
   const current = useResumeStore((s) => s.current)
   const list = useResumeStore((s) => s.list)
@@ -342,6 +343,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <button className={btnClsGhost} title={t('templateStudio', locale)} onClick={() => setDialog('studio')}>{t('templateStudio', locale)}</button>
       <button className={btnClsGhost} title={t('healthCheck', locale)} onClick={() => setDialog('health')}><HeartPulse size={14} className="inline -mt-0.5 mr-0.5" />{t('healthCheck', locale)}</button>
       <button className={btnClsGhost} title={t('snapshot', locale)} onClick={() => setDialog('snapshot')}><Camera size={14} className="inline -mt-0.5 mr-0.5" />{t('snapshot', locale)}</button>
+      <button className="w-7 h-7 flex items-center justify-center rounded text-chrome-muted hover:bg-chrome-bg" title={t('presentTitle', locale)} onClick={() => setPresentMode(true)}><Maximize2 size={15} /></button>
       {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
       <button
         className={clsx(

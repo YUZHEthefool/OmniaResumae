@@ -56,6 +56,7 @@ export default function App() {
   const init = useResumeStore((s) => s.init)
   const loaded = useResumeStore((s) => s.loaded)
   const copilotOpen = useUIStore((s) => s.copilotOpen)
+  const presentMode = useUIStore((s) => s.presentMode)
   const locale = useUIStore((s) => s.locale)
   const previewRef = useRef<HTMLDivElement>(null)
 
@@ -85,6 +86,11 @@ export default function App() {
   // Ctrl+Z，Ctrl+Y / Ctrl+Shift+Z 在输入框内被吞，redo 失效）。输入态全交给浏览器。
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 演示模式 Esc 退出（无对话框时；对话框的 Esc 由 Overlay 自行处理）
+      if (e.key === 'Escape' && useUIStore.getState().presentMode) {
+        useUIStore.getState().setPresentMode(false)
+        return
+      }
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
       const k = e.key.toLowerCase()
@@ -107,6 +113,22 @@ export default function App() {
     return (
       <div className="h-full flex items-center justify-center text-chrome-muted text-sm">
         {t('loading', locale)}
+      </div>
+    )
+  }
+
+  // 全屏预览/演示模式：隐藏顶栏与编辑器，预览占满，浮动按钮退出（Esc 同样退出）
+  if (presentMode) {
+    return (
+      <div className="h-full">
+        <PreviewPane ref={previewRef} />
+        <button
+          className="fixed top-3 right-3 z-50 px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-chrome-bg rounded shadow-lg hover:opacity-90"
+          title={t('presentTitle', locale)}
+          onClick={() => useUIStore.getState().setPresentMode(false)}
+        >
+          ✕ {t('presentExit', locale)}
+        </button>
       </div>
     )
   }

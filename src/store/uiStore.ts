@@ -22,6 +22,7 @@ interface UIState {
   theme: Theme
   importOpen: boolean // 导入对话框是否打开（由顶栏按钮或拖拽文件触发）
   importFile: File | null // 拖拽带入、待 ImportDialog 消费的文件
+  presentMode: boolean // 全屏预览/演示：隐藏编辑器与顶栏，预览占满屏
   setLocale: (l: Locale) => void
   setTemplate: (id: string) => void
   /** 仅写 uiStore.templateId（不镜像）——供 App 从 resume.templateId 重水合用 */
@@ -33,6 +34,7 @@ interface UIState {
   toggleTheme: () => void
   setImportOpen: (v: boolean) => void
   setImportFile: (f: File | null) => void
+  setPresentMode: (v: boolean) => void
 }
 
 /** 把 theme 同步到 <html> 的 dark 类 */
@@ -52,6 +54,7 @@ export const useUIStore = create<UIState>()(
       theme: 'light',
       importOpen: false,
       importFile: null,
+      presentMode: false,
       setLocale: (locale) => set({ locale }),
       setTemplate: (templateId) => {
         set({ templateId })
@@ -77,6 +80,7 @@ export const useUIStore = create<UIState>()(
       },
       setImportOpen: (importOpen) => set({ importOpen }),
       setImportFile: (importFile) => set({ importFile }),
+      setPresentMode: (presentMode) => set({ presentMode }),
     }),
     {
       name: 'omniaresumae-ui',
