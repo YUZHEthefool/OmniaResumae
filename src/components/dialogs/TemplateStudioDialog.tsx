@@ -165,7 +165,7 @@ export function TemplateStudioDialog({ onClose }: { onClose: () => void }) {
                 disabled={busy}
               />
               <button
-                className="self-start px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-white rounded hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
+                className="self-start px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-chrome-bg rounded hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
                 onClick={() => void runGenerate()}
                 disabled={busy || (!description.trim() && !imageDataUrl)}
               >

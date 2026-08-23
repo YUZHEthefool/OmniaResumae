@@ -91,7 +91,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
           type="button"
           onClick={() => { setSinglePreview((v) => !v); if (!singlePreview) { setShowPages(false); setEditing(false) } }}
           className={`px-2.5 py-1 text-xs rounded border ${
-            singlePreview ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
+            singlePreview ? 'bg-chrome-ink text-chrome-bg border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
           }`}
           title={t('singlePreviewTitle', locale)}
         >
@@ -101,7 +101,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
           type="button"
           onClick={() => setShowPages((v) => !v)}
           className={`px-2.5 py-1 text-xs rounded border ${
-            showPages ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
+            showPages ? 'bg-chrome-ink text-chrome-bg border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
           } disabled:opacity-30 disabled:cursor-not-allowed`}
           title={t('pageGuideTitle', locale)}
           disabled={singlePreview}
@@ -114,7 +114,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
           type="button"
           onClick={() => setEditing((v) => !v)}
           className={`px-2.5 py-1 text-xs rounded border ${
-            editing ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
+            editing ? 'bg-chrome-ink text-chrome-bg border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg'
           }`}
           title={t('editPreviewTitle', locale)}
         >

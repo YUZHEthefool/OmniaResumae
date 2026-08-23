@@ -195,7 +195,7 @@ export function ImageUpload({
         </div>
       )}
       <div className="flex gap-2">
-        <label className="px-2 py-1 text-xs bg-chrome-ink text-white rounded cursor-pointer hover:bg-black">
+        <label className="px-2 py-1 text-xs bg-chrome-ink text-chrome-bg rounded cursor-pointer hover:bg-black">
           {t('upload', locale)}
           <input
             type="file"

@@ -124,7 +124,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
                       onClick={() => setAIConfig({ model: m })}
                       className={`px-2 py-1 text-[11px] rounded border transition-colors truncate max-w-[200px] ${
                         ai.model === m
-                          ? 'bg-chrome-ink text-white border-chrome-ink'
+                          ? 'bg-chrome-ink text-chrome-bg border-chrome-ink'
                           : 'bg-white border-chrome-border hover:border-chrome-ink hover:bg-chrome-bg'
                       }`}
                     >
@@ -170,7 +170,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex justify-end px-5 py-3 border-t border-chrome-border">
-          <button className="px-3 py-1.5 text-sm bg-chrome-ink text-white rounded hover:bg-black" onClick={onClose}>{t('done', locale)}</button>
+          <button className="px-3 py-1.5 text-sm bg-chrome-ink text-chrome-bg rounded hover:bg-black" onClick={onClose}>{t('done', locale)}</button>
         </div>
       </div>
     </Overlay>

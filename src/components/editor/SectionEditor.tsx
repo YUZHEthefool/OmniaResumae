@@ -125,7 +125,7 @@ export function SectionEditor({ section, locale, sortable }: { section: Section;
         >
           {open ? '▾' : '▸'}
         </button>
-        <span className="text-xs font-mono px-1.5 py-0.5 bg-chrome-ink text-white rounded">
+        <span className="text-xs font-mono px-1.5 py-0.5 bg-chrome-ink text-chrome-bg rounded">
           {section.layout === 'main' ? t('layoutMain', locale) : t('layoutSidebar', locale)}
         </span>
         <span className="text-sm font-semibold text-chrome-ink flex-1 truncate">

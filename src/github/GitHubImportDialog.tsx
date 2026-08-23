@@ -143,7 +143,7 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
               : '将列出该用户的公开仓库 + 其所属组织的公开仓库。贡献过的他人仓库需用 PAT 查自己。'}
           </p>
           <button
-            className="px-3 py-1.5 text-sm bg-chrome-ink text-white rounded hover:bg-black disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-chrome-ink text-chrome-bg rounded hover:bg-black disabled:opacity-50"
             onClick={load}
             disabled={busy || (!useMine && !username.trim())}
           >
@@ -179,7 +179,7 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-chrome-border">
           <button className="px-3 py-1.5 text-sm border border-chrome-border rounded hover:bg-chrome-bg" onClick={onClose}>取消</button>
           <button
-            className={clsx('px-3 py-1.5 text-sm rounded', selected.size ? 'bg-chrome-ink text-white hover:bg-black' : 'bg-chrome-ink text-white opacity-50')}
+            className={clsx('px-3 py-1.5 text-sm rounded', selected.size ? 'bg-chrome-ink text-chrome-bg hover:bg-black' : 'bg-chrome-ink text-chrome-bg opacity-50')}
             onClick={doImport}
             disabled={!selected.size || busy}
           >

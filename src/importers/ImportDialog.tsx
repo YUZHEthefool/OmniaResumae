@@ -252,7 +252,7 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
                 key={k}
                 className={clsx(
                   'px-3 py-1.5 text-xs rounded border',
-                  source === k ? 'bg-chrome-ink text-white border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg',
+                  source === k ? 'bg-chrome-ink text-chrome-bg border-chrome-ink' : 'border-chrome-border hover:bg-chrome-bg',
                 )}
                 onClick={() => { setSource(k); setFrag(null); setAIResume(null); setRaw(''); setInfo(''); setErr('') }}
               >
@@ -328,7 +328,7 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
           {/* AI 结构化按钮：有结果则隐藏；有原文但无结果时为主操作 */}
           {(frag || raw) && !aiResume && (
             <button
-              className="px-3 py-1.5 text-xs bg-chrome-ink text-white rounded hover:bg-black disabled:opacity-50"
+              className="px-3 py-1.5 text-xs bg-chrome-ink text-chrome-bg rounded hover:bg-black disabled:opacity-50"
               onClick={runAI}
               disabled={busy}
             >
@@ -353,7 +353,7 @@ export function ImportDialog({ initialFile, onClose }: { initialFile?: File | nu
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-chrome-border">
           <button className="px-3 py-1.5 text-sm border border-chrome-border rounded hover:bg-chrome-bg" onClick={onClose}>取消</button>
           <button
-            className="px-3 py-1.5 text-sm bg-chrome-ink text-white rounded hover:bg-black disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-chrome-ink text-chrome-bg rounded hover:bg-black disabled:opacity-50"
             onClick={doMerge}
             disabled={!aiResume && !frag}
           >

@@ -142,7 +142,7 @@ export function EditorPanel() {
                 <button
                   key={a.type}
                   type="button"
-                  className="px-2 py-1 text-xs border border-chrome-border rounded hover:bg-chrome-ink hover:text-white"
+                  className="px-2 py-1 text-xs border border-chrome-border rounded hover:bg-chrome-ink hover:text-chrome-bg"
                   onClick={() => {
                     addSection(a.type, ['work', 'education', 'skills', 'projects', 'workflow'].includes(a.type) ? 'main' : 'sidebar')
                     setShowAdd(false)
