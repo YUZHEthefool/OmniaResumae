@@ -3,7 +3,7 @@
  * 从原 AIDialog 提取，深色化（copilot token），在 CopilotPanel 内嵌渲染。
  * 保留「提案-逐条采纳」流程：AI 出提案 → 用户勾选 → 应用写回 store。
  */
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { clsx } from 'clsx'
 import { useResumeStore } from '@/store/resumeStore'
 import { useSettingsStore } from '@/store/settingsStore'
@@ -25,6 +25,9 @@ export function OptimizeAction() {
   const [err, setErr] = useState('')
   const [prop, setProp] = useState<OptimizeProposal | null>(null)
   const [accepted, setAccepted] = useState<Set<number>>(new Set())
+  // 捕获运行时的语种：提案在 zh 下生成（it.original 是 zh 文本），若用户在 apply 前切到 en，
+  // 旧实现用当前 locale 查找/写入会写错语种槽。apply 一律用运行时 locale。
+  const runLocaleRef = useRef(locale)
 
   const candidates = resume.sections
     .filter((s) => ['work', 'projects', 'education'].includes(s.type))
@@ -39,6 +42,7 @@ export function OptimizeAction() {
     const item = sec?.items.find((i) => i.id === itemId) as { highlights?: { zh?: string; en?: string }[] } | undefined
     if (!item?.highlights?.length) { setErr('该条目没有要点可优化'); return }
     setBusy(true); setErr(''); setProp(null); setAccepted(new Set())
+    runLocaleRef.current = locale
     try {
       if (!cfg.apiKey) throw new Error('请先在「设置」配置 AI 密钥')
       const items = item.highlights.map((h) => pick(h, locale)).filter(Boolean)
@@ -56,8 +60,9 @@ export function OptimizeAction() {
       if (!item?.highlights) return
       prop.items.forEach((it, i) => {
         if (accepted.has(i)) {
-          const idx = item.highlights!.findIndex((h) => pick(h, locale) === it.original)
-          if (idx >= 0) item.highlights![idx] = { ...item.highlights![idx], [locale]: it.rewritten }
+          const loc = runLocaleRef.current
+          const idx = item.highlights!.findIndex((h) => pick(h, loc) === it.original)
+          if (idx >= 0) item.highlights![idx] = { ...item.highlights![idx], [loc]: it.rewritten }
         }
       })
     })
@@ -109,9 +114,12 @@ export function TailorAction() {
   const [acceptHighlights, setAcceptHighlights] = useState(false)
   const [acceptMatches, setAcceptMatches] = useState(false)
   const [acceptPride, setAcceptPride] = useState(false)
+  // 捕获运行时语种，apply 时用（与 Optimize 同理）：提案按运行语种生成，切语言后 apply 不能写错槽。
+  const runLocaleRef = useRef(locale)
 
   const run = async () => {
     setBusy(true); setErr(''); setProp(null)
+    runLocaleRef.current = locale
     try {
       if (!cfg.apiKey) throw new Error('请先在「设置」配置 AI 密钥')
       if (!company.trim()) throw new Error('请填写目标公司')
@@ -122,6 +130,7 @@ export function TailorAction() {
 
   const apply = () => {
     if (!prop) return
+    const loc = runLocaleRef.current
     update((d) => {
       if (acceptHighlights) {
         const sec = d.sections.find((s) => s.type === 'projects')
@@ -131,7 +140,7 @@ export function TailorAction() {
             if (item) {
               // 按索引保留另一语言，避免改写要点时整组擦除非当前语言（双语简历数据丢失）
               const old = item.highlights ?? []
-              item.highlights = rw.highlights.map((h, i) => ({ ...(old[i] ?? {}), [locale]: h } as { zh?: string; en?: string }))
+              item.highlights = rw.highlights.map((h, i) => ({ ...(old[i] ?? {}), [loc]: h } as { zh?: string; en?: string }))
             }
           }
           sec.items.sort((a, b) => {
@@ -148,16 +157,16 @@ export function TailorAction() {
           const old = sec.items as { tag?: { zh?: string; en?: string }; body?: { zh?: string; en?: string } }[]
           sec.items = prop.matches.map((m, i) => ({
             id: `match_ai_${i}`,
-            tag: { ...(old[i]?.tag ?? {}), [locale]: m.tag } as { zh?: string; en?: string },
-            body: { ...(old[i]?.body ?? {}), [locale]: m.body } as { zh?: string; en?: string },
+            tag: { ...(old[i]?.tag ?? {}), [loc]: m.tag } as { zh?: string; en?: string },
+            body: { ...(old[i]?.body ?? {}), [loc]: m.body } as { zh?: string; en?: string },
           })) as never[]
         } else {
-          const matchItems = prop.matches.map((m, i) => ({ id: `match_ai_${i}`, tag: { [locale]: m.tag } as { zh?: string; en?: string }, body: { [locale]: m.body } as { zh?: string; en?: string } }))
+          const matchItems = prop.matches.map((m, i) => ({ id: `match_ai_${i}`, tag: { [loc]: m.tag } as { zh?: string; en?: string }, body: { [loc]: m.body } as { zh?: string; en?: string } }))
           d.sections.push({ id: 'sec_match_ai', type: 'matches', title: { zh: '招聘要求匹配', en: 'Match' }, layout: 'sidebar', items: matchItems as never[], visible: true })
         }
       }
       if (acceptPride && prop.pride) {
-        d.basics.summary = { ...d.basics.summary, [locale]: prop.pride }
+        d.basics.summary = { ...d.basics.summary, [loc]: prop.pride }
       }
     })
     setProp(null)
@@ -222,6 +231,9 @@ export function TranslateAction() {
   const [err, setErr] = useState('')
   const [prop, setProp] = useState<TranslateProposal | null>(null)
   const [accepted, setAccepted] = useState<Set<number>>(new Set())
+  // 快照运行时的字段列表（闭包已绑定运行时 to）：fields 每渲染按当前 locale/to 重建，
+  // 若运行后切语言，fields 长度/顺序会变且 to 翻转，apply 用旧 fields 会写错字段/语种（甚至覆盖源数据）。
+  const [runFields, setRunFields] = useState<TransField[]>([])
 
   const fields: TransField[] = []
   const add = (label: string, loc: { zh?: string; en?: string }, apply: (d: Resume, v: string) => void) => {
@@ -268,6 +280,7 @@ export function TranslateAction() {
 
   const run = async () => {
     setBusy(true); setErr(''); setProp(null); setAccepted(new Set())
+    setRunFields(fields)
     try {
       if (!cfg.apiKey) throw new Error('请先在「设置」配置 AI 密钥')
       if (!fields.length) { setErr('没有需要翻译的空字段'); return }
@@ -280,8 +293,8 @@ export function TranslateAction() {
     if (!prop) return
     update((d) => {
       prop.pairs.forEach((pair, i) => {
-        // AI 可能返回多于字段数的 pairs，越界时跳过，避免 fields[i] undefined 崩溃
-        if (accepted.has(i) && fields[i]) fields[i].apply(d, pair.target)
+        // AI 可能返回多于字段数的 pairs，越界时跳过，避免 runFields[i] undefined 崩溃
+        if (accepted.has(i) && runFields[i]) runFields[i].apply(d, pair.target)
       })
     })
     setProp(null); setAccepted(new Set())
@@ -300,7 +313,7 @@ export function TranslateAction() {
         <div className="space-y-2">
           {prop.pairs.map((pair, i) => (
             <div key={i} className={clsx('border rounded p-2', accepted.has(i) ? 'border-green-600 bg-green-950/30' : 'border-copilot-border bg-copilot-surface')}>
-              <div className="text-[10px] text-copilot-dim mb-1">{fields[i]?.label}</div>
+              <div className="text-[10px] text-copilot-dim mb-1">{runFields[i]?.label}</div>
               <div className="text-[11px] text-copilot-dim mb-1">{pair.source}</div>
               <div className="text-xs text-copilot-ink">{pair.target}</div>
               <button className="mt-1 text-[11px] px-2 py-0.5 border border-copilot-border rounded text-copilot-muted hover:text-copilot-ink" onClick={() => setAccepted((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n })}>
