@@ -12,6 +12,7 @@
  * 密钥策略：密钥是敏感凭据，备份默认不含；用户显式勾选才含（谨慎分享）。
  */
 import { db, listResumes, listConversations, listAllSnapshots } from '@/db'
+import { useResumeStore } from '@/store/resumeStore'
 
 const BACKUP_VERSION = 1
 
@@ -40,6 +41,8 @@ function readLS(key: string): unknown {
 
 /** 导出整站备份。includeKeys=true 时把 settings（含密钥）也打进包。 */
 export async function exportBackup(includeKeys: boolean): Promise<void> {
+  // 冲写当前简历的待写草稿（节流 600ms 内的编辑尚未落盘），否则备份漏掉最后一次编辑。
+  await useResumeStore.getState().saveNow()
   const resumes = await listResumes()
   const conversations = await listConversations()
   const snapshots = await listAllSnapshots()
@@ -79,6 +82,11 @@ export async function importBackup(file: File, importKeys: boolean): Promise<voi
     throw new Error('restoreInvalid')
   }
   if (!data || data.version !== BACKUP_VERSION) throw new Error('restoreInvalid')
+
+  // 恢复前先冲写当前简历待写草稿：reload 触发的 pagehide 会调 flushSave，若 pendingDraft 仍在，
+  // 其 doPut 排在 bulkPut 之后落盘会覆盖刚恢复的同 id 简历。先 saveNow 落盘并清空 pendingDraft，
+  // 使随后的 pagehide flushSave 成 no-op，恢复数据不被本地编辑覆盖。
+  await useResumeStore.getState().saveNow()
 
   // Dexie 三表：bulkPut 按 id 合并（同 id 覆盖、新 id 插入），不删现有未在备份中的记录。
   if (Array.isArray(data.resumes) && data.resumes.length) await db.resumes.bulkPut(data.resumes as never[])
