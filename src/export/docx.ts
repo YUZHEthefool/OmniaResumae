@@ -13,6 +13,25 @@ import { slugify } from '@/utils/slug'
 import type { Resume, Locale } from '@/types/resume'
 import { pick } from '@/types/resume'
 
+/** 把 @scope <root> { <inner> } 拆成裸 <inner>：Word/WPS 的 HTML 引擎不认 @scope（2024+ 浏览器特性），
+ *  会跳过整块致 AI 生成模板的样式全丢，且 CustomBody 的重复钩子（.summary 与 .pride-block、header 与
+ *  侧栏 basics 等）双双可见。拆成全局规则后 Word 能按选择器应用（克隆 DOM 是文档唯一内容，不会越界）。
+ *  深度感知去括号，保留内层 @media/@keyframes 的配对括号。 */
+function unwrapScope(css: string): string {
+  const idx = css.indexOf('@scope')
+  if (idx < 0) return css
+  const brace = css.indexOf('{', idx)
+  if (brace < 0) return css
+  let depth = 1
+  let end = -1
+  for (let i = brace + 1; i < css.length; i++) {
+    if (css[i] === '{') depth++
+    else if (css[i] === '}') { depth--; if (depth === 0) { end = i; break } }
+  }
+  if (end < 0) return css
+  return css.slice(0, idx) + css.slice(brace + 1, end) + css.slice(end + 1)
+}
+
 /** 收集页面全部样式表为内联字符串：<style> 取 outerHTML，<link> 尝试 fetch 文本内联、跨域回退 link 绝对 href */
 async function collectStyles(): Promise<string> {
   return Promise.all(
@@ -27,6 +46,12 @@ async function collectStyles(): Promise<string> {
         const c = el.cloneNode(true) as HTMLLinkElement
         c.href = el.href
         return c.outerHTML
+      }
+      // AI 生成模板的 <style data-tpl-id> 用 @scope 包裹：Word 不认 @scope 会整块丢弃，
+      // 拆成全局规则让 Word 按选择器应用（克隆 DOM 是唯一内容，不会越界影响 chrome）。
+      if (el instanceof HTMLStyleElement) {
+        const css = el.textContent ?? ''
+        if (css.includes('@scope')) return `<style>\n${unwrapScope(css)}\n</style>`
       }
       return el.outerHTML
     }),
