@@ -139,6 +139,9 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
       },
       run: (args) => {
         const { targetRole, keywords } = args as { targetRole?: Localized; keywords?: unknown[] }
+        // 守卫放在 update 外：update 的 (draft)=>void 回调 return 值会被丢弃，旧实现把这条
+        // 防御 return 写在回调内→静默忽略但仍返回"已更新"，模型不知失败、不会重试。
+        if (keywords !== undefined && !Array.isArray(keywords)) return 'ok: meta keywords 非数组,已忽略'
         useResumeStore.getState().update((d) => {
           if (targetRole) {
             if (isLocalized(targetRole)) d.meta.targetRole = mergeLoc(d.meta.targetRole, targetRole)
@@ -147,7 +150,6 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
           if (keywords) {
             // 按当前语种值匹配旧条目以保留另一语言（模型重排序也不会把中英文交叉配错）；
             // 模型若直接给完整 {zh,en} 对象则原样采用。旧实现按索引合并，重排序会交叉。
-            if (!Array.isArray(keywords)) return 'ok: meta keywords 非数组,已忽略'
             const prev = d.meta.keywords ?? []
             d.meta.keywords = (keywords as unknown[]).map((k): Localized => {
               if (isLocalized(k)) {
