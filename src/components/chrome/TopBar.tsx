@@ -23,10 +23,11 @@ import { SettingsDialog } from '@/components/dialogs/SettingsDialog'
 import { TemplateStudioDialog } from '@/components/dialogs/TemplateStudioDialog'
 import { HealthCheckDialog } from '@/components/dialogs/HealthCheckDialog'
 import { SnapshotDialog } from '@/components/dialogs/SnapshotDialog'
+import { GenerateResumeDialog } from '@/components/dialogs/GenerateResumeDialog'
 import { useTemplateStore } from '@/store/templateStore'
 import { slugify } from '@/utils/slug'
 import { t } from '@/i18n'
-import { Github, Sparkles, Sun, Moon, Undo2, Redo2, HeartPulse, Camera, Maximize2 } from 'lucide-react'
+import { Github, Sparkles, Sun, Moon, Undo2, Redo2, HeartPulse, Camera, Maximize2, Wand2 } from 'lucide-react'
 
 export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }) {
   const locale = useUIStore((s) => s.locale)
@@ -57,7 +58,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
 
   const [exporting, setExporting] = useState(false)
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
-  const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio' | 'health' | 'snapshot'>(null)
+  const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio' | 'health' | 'snapshot' | 'generate'>(null)
   const barRef = useRef<HTMLDivElement>(null)
   const restoreFileRef = useRef<HTMLInputElement>(null)
 
@@ -356,6 +357,8 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <button className={btnClsGhost} title={t('healthCheck', locale)} onClick={() => setDialog('health')}><HeartPulse size={14} className="inline -mt-0.5 mr-0.5" />{t('healthCheck', locale)}</button>
       <button className={btnClsGhost} title={t('snapshot', locale)} onClick={() => setDialog('snapshot')}><Camera size={14} className="inline -mt-0.5 mr-0.5" />{t('snapshot', locale)}</button>
       <button className="w-7 h-7 flex items-center justify-center rounded text-chrome-muted hover:bg-chrome-bg" title={t('presentTitle', locale)} onClick={() => setPresentMode(true)}><Maximize2 size={15} /></button>
+      {/* AI 一键生成整份简历：从描述/JD 生成完整简历（独立对话框，不进 Copilot 编辑当前简历的流程） */}
+      <button className={btnClsGhost} title={t('genTitle', locale)} onClick={() => setDialog('generate')}><Wand2 size={14} className="inline -mt-0.5 mr-0.5" />{t('generateResume', locale)}</button>
       {/* AI Copilot 切换：图标式，默认收起，点开右侧停靠面板 */}
       <button
         className={clsx(
@@ -435,6 +438,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       {dialog === 'studio' && <TemplateStudioDialog onClose={() => setDialog(null)} />}
       {dialog === 'health' && <HealthCheckDialog onClose={() => setDialog(null)} />}
       {dialog === 'snapshot' && <SnapshotDialog onClose={() => setDialog(null)} />}
+      {dialog === 'generate' && <GenerateResumeDialog onClose={() => setDialog(null)} />}
     </div>
   )
 }
