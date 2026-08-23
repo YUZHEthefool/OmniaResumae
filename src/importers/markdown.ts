@@ -58,14 +58,8 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
         currentSection = makeSection(stripIcon(text))
         lastItem = null
       } else if (h.depth >= 3 && currentSection) {
-        // entry-title 的 h3：作为条目名（work/education/projects 通用），日期可能在后续 paragraph
-        const mapped = mapSectionType(currentSection.type)
-        const item: Record<string, unknown> = { id: uid('md_item') }
-        if (mapped === 'work') { item.position = localize(text, langHint); item.name = localize('', langHint); item.highlights = [] }
-        else if (mapped === 'education') { item.institution = localize(text, langHint); item.area = localize('', langHint); item.highlights = [] }
-        else if (mapped === 'projects') { item.name = localize(text, langHint); item.description = localize('', langHint); item.highlights = [] }
-        else { item.title = localize(text, langHint) }
-        pushItem(item)
+        // entry-title 的 h3：作为条目名，按 section.type 落到正确字段；日期可能在后续 paragraph
+        pushItem(makeItemByType(currentSection.type, text, langHint))
       }
     } else if (tok.type === 'paragraph') {
       const p = tok as Tokens.Paragraph
@@ -145,9 +139,10 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
       const tb = tok as Tokens.Table
       if (!currentSection) continue
       // 表格：每行拼成 "cell · cell" 作为要点/条目，避免整表丢失
-      const rows = (tb.rows ?? [])
-        .map((row) => row.map((cell) => inlineText((cell as Tokens.TableCell).tokens).trim()).filter(Boolean).join(' · '))
-        .filter(Boolean)
+      const cellText = (c: Tokens.TableCell) => inlineText((c as Tokens.TableCell).tokens).trim()
+      // 表头行（tb.header）旧被漏掉、列标签丢失——并入首行
+      const header = (tb.header ?? []).map(cellText).filter(Boolean).join(' · ')
+      const rows = [header, ...(tb.rows ?? []).map((row) => row.map(cellText).filter(Boolean).join(' · '))].filter(Boolean)
       const last = lastItem as { highlights?: Localized[] } | null
       if (last && last.highlights) {
         for (const r of rows) last.highlights.push(localize(r, langHint))
@@ -181,12 +176,7 @@ export function parseMarkdownToFragment(md: string): ImportFragment {
       // entry-title div（LapisCV: <div class="entry-title"><h3>名</h3><p>日期</p></div>）
       const et = html.match(/<div[^>]*entry-title[^>]*>\s*<h3>(.*?)<\/h3>\s*<p>(.*?)<\/p>/i)
       if (et && currentSection) {
-        const mapped = mapSectionType(currentSection.type)
-        const item: Record<string, unknown> = { id: uid('md_item') }
-        if (mapped === 'work') { item.position = localize(stripTags(et[1]), langHint); item.name = localize('', langHint); item.highlights = [] }
-        else if (mapped === 'education') { item.institution = localize(stripTags(et[1]), langHint); item.area = localize('', langHint); item.highlights = [] }
-        else if (mapped === 'projects') { item.name = localize(stripTags(et[1]), langHint); item.description = localize('', langHint); item.highlights = [] }
-        else { item.title = localize(stripTags(et[1]), langHint) }
+        const item = makeItemByType(currentSection.type, stripTags(et[1]), langHint)
         const d = parseDateLine(et[2])
         if (d?.startDate) item.startDate = d.startDate
         if (d?.endDate) item.endDate = d.endDate
@@ -298,6 +288,24 @@ function makeSection(title: string): ImportFragment['sections'][number] {
     items: [],
     visible: true,
   }
+}
+
+/** 按 section.type 把 h3/entry-title 文本落到正确的条目字段。
+ *  旧实现统一写 item.title，但 publications/skills/domains 用 name、matches 用 tag、community 用 platform，
+ *  标题会落进消费方不读的字段而静默丢失（jsonResume 导出 publications 过滤 name 为空的条目→整条丢）。
+ *  work/education/projects 仍给带 highlights 的骨架。custom/workflow 退到 name/label。 */
+function makeItemByType(type: string, text: string, lang: 'zh' | 'en'): Record<string, unknown> {
+  const item: Record<string, unknown> = { id: uid('md_item') }
+  if (type === 'work') { item.position = localize(text, lang); item.name = localize('', lang); item.highlights = [] }
+  else if (type === 'education') { item.institution = localize(text, lang); item.area = localize('', lang); item.highlights = [] }
+  else if (type === 'projects') { item.name = localize(text, lang); item.description = localize('', lang); item.highlights = [] }
+  else if (type === 'awards') { item.title = localize(text, lang) }
+  else if (type === 'publications' || type === 'skills' || type === 'domains') { item.name = localize(text, lang) }
+  else if (type === 'matches') { item.tag = localize(text, lang); item.body = localize('', lang) }
+  else if (type === 'community') { item.platform = text }
+  else if (type === 'workflow') { item.label = localize(text, lang); item.text = localize('', lang) }
+  else { item.name = localize(text, lang) }
+  return item
 }
 
 function extractContact(text: string): Partial<{ email: string; phone: string; url: string }> | null {
