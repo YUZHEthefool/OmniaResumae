@@ -22,7 +22,7 @@ export function fmtDateRange(start?: string, end?: string, locale: Locale = 'zh'
   const norm = (d?: string) => {
     if (!d) return ''
     const t = d.trim()
-    if (/^(present|至今)$/i.test(t)) return locale === 'zh' ? '至今' : 'Present'
+    if (/^(present|至今|now|当前)$/i.test(t)) return locale === 'zh' ? '至今' : 'Present'
     return d
   }
   return [norm(start), norm(end)].filter(Boolean).join(' — ')
