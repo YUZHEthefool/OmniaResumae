@@ -382,10 +382,16 @@ function Overlay({
   // 挂载时聚焦容器、Escape 关闭；aria-modal 屏蔽辅助技术读到背景控件
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    // 记录打开对话框前的焦点元素，关闭时归还——键盘/屏幕阅读器用户不会丢失操作位置
+    const prev = document.activeElement as HTMLElement | null
     ref.current?.focus()
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      // 触发按钮可能已重渲染/卸载，归还失败是静默 no-op
+      if (prev && document.contains(prev)) prev.focus()
+    }
   }, [onClose])
   return (
     <div
