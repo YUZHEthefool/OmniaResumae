@@ -6,13 +6,15 @@
  *   避免破坏跨标签/chatStore 关联），走 resumeStore.update(Object.assign)——同 CopilotPanel 撤销本轮，
  *   恢复后可用 Ctrl+Z 撤销。切换简历时重载本简历的快照。
  */
-import { useEffect, useState } from 'react'
-import { Camera, X, RotateCcw, Trash2, Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { clsx } from 'clsx'
+import { Camera, X, RotateCcw, Trash2, Plus, GitCompare } from 'lucide-react'
 import { Overlay } from '@/importers/ImportDialog'
 import { useResumeStore } from '@/store/resumeStore'
 import { useSnapshotStore } from '@/store/snapshotStore'
 import { useUIStore } from '@/store/uiStore'
 import { t } from '@/i18n'
+import { diffResumes } from '@/utils/diffResumes'
 import type { Snapshot } from '@/types/resume'
 
 export function SnapshotDialog({ onClose }: { onClose: () => void }) {
@@ -27,6 +29,13 @@ export function SnapshotDialog({ onClose }: { onClose: () => void }) {
 
   const [name, setName] = useState('')
   const [msg, setMsg] = useState('')
+  // 正在对比的快照：非 null 时显示"恢复将产生的变化"视图代替列表
+  const [diffFor, setDiffFor] = useState<Snapshot | null>(null)
+
+  const diff = useMemo(
+    () => (diffFor && current ? diffResumes(current, diffFor.resume, locale) : []),
+    [diffFor, current, locale],
+  )
 
   const resumeId = current?.id ?? '__none__'
 
@@ -94,34 +103,80 @@ export function SnapshotDialog({ onClose }: { onClose: () => void }) {
 
           {msg && <div className="text-xs text-green-600">{msg}</div>}
 
-          {/* 快照列表 */}
-          {snapshots.length === 0 ? (
-            <div className="text-xs text-chrome-muted text-center py-8 leading-relaxed">{t('snapshotEmpty', locale)}</div>
-          ) : (
+          {diffFor ? (
+            /* 差异对比视图：列出恢复该快照会产生的 added/removed/changed */
             <div className="space-y-2">
-              {snapshots.map((snap) => (
-                <div key={snap.id} className="flex items-center gap-2 px-3 py-2.5 rounded border border-chrome-border bg-chrome-bg/50">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-chrome-ink truncate">{snap.name}</div>
-                    <div className="text-[11px] text-chrome-muted">{t('snapshotCreatedAt', locale)} {fmtDate(snap.createdAt)}</div>
-                  </div>
-                  <button
-                    className="px-2 py-1 text-xs border border-chrome-border rounded text-chrome-muted hover:text-chrome-ink hover:bg-chrome-bg flex items-center gap-1"
-                    onClick={() => doRestore(snap)}
-                    title={t('snapshotRestore', locale)}
-                  >
-                    <RotateCcw size={12} /> {t('snapshotRestore', locale)}
-                  </button>
-                  <button
-                    className="px-2 py-1 text-xs border border-chrome-border rounded text-chrome-muted hover:text-red-600 hover:border-red-300 flex items-center gap-1"
-                    onClick={() => doDelete(snap)}
-                    title={t('snapshotDelete', locale)}
-                  >
-                    <Trash2 size={12} />
-                  </button>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">{t('snapshotDiffTitle', locale)}</div>
+                <button className="text-xs text-chrome-muted hover:text-chrome-ink" onClick={() => setDiffFor(null)}>
+                  ← {t('snapshotDiffBack', locale)}
+                </button>
+              </div>
+              <div className="text-[11px] text-chrome-muted">{diffFor.name} · {fmtDate(diffFor.createdAt)}</div>
+              {diff.length === 0 ? (
+                <div className="text-xs text-chrome-muted text-center py-6">{t('snapshotDiffEmpty', locale)}</div>
+              ) : (
+                <div className="space-y-1">
+                  {diff.map((c, i) => (
+                    <div
+                      key={i}
+                      className={clsx(
+                        'text-xs px-2 py-1.5 rounded border break-words',
+                        c.type === 'added' ? 'border-green-500/30 bg-green-500/10'
+                          : c.type === 'removed' ? 'border-red-500/30 bg-red-500/10'
+                            : 'border-amber-500/30 bg-amber-500/10',
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className={clsx('font-semibold flex-shrink-0', c.type === 'added' ? 'text-green-600' : c.type === 'removed' ? 'text-red-600' : 'text-amber-600')}>
+                          {t(c.type === 'added' ? 'diffAdded' : c.type === 'removed' ? 'diffRemoved' : 'diffChanged', locale)}
+                        </span>
+                        <span className="text-chrome-ink">{c.path}</span>
+                      </div>
+                      {c.from && <div className="text-[11px] text-chrome-muted line-through mt-0.5">{c.from}</div>}
+                      {c.to && <div className="text-[11px] text-chrome-ink mt-0.5">{c.to}</div>}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
+          ) : (
+            /* 快照列表 */
+            snapshots.length === 0 ? (
+              <div className="text-xs text-chrome-muted text-center py-8 leading-relaxed">{t('snapshotEmpty', locale)}</div>
+            ) : (
+              <div className="space-y-2">
+                {snapshots.map((snap) => (
+                  <div key={snap.id} className="flex items-center gap-2 px-3 py-2.5 rounded border border-chrome-border bg-chrome-bg/50">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-chrome-ink truncate">{snap.name}</div>
+                      <div className="text-[11px] text-chrome-muted">{t('snapshotCreatedAt', locale)} {fmtDate(snap.createdAt)}</div>
+                    </div>
+                    <button
+                      className="px-2 py-1 text-xs border border-chrome-border rounded text-chrome-muted hover:text-chrome-ink hover:bg-chrome-bg flex items-center gap-1"
+                      onClick={() => setDiffFor(snap)}
+                      title={t('snapshotDiff', locale)}
+                    >
+                      <GitCompare size={12} />
+                    </button>
+                    <button
+                      className="px-2 py-1 text-xs border border-chrome-border rounded text-chrome-muted hover:text-chrome-ink hover:bg-chrome-bg flex items-center gap-1"
+                      onClick={() => doRestore(snap)}
+                      title={t('snapshotRestore', locale)}
+                    >
+                      <RotateCcw size={12} /> {t('snapshotRestore', locale)}
+                    </button>
+                    <button
+                      className="px-2 py-1 text-xs border border-chrome-border rounded text-chrome-muted hover:text-red-600 hover:border-red-300 flex items-center gap-1"
+                      onClick={() => doDelete(snap)}
+                      title={t('snapshotDelete', locale)}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
