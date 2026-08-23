@@ -323,6 +323,45 @@ export const zh = {
   confirmDeleteSnapshot: '确定删除快照「{name}」？此操作不可撤销。',
   snapshotCreatedAt: '创建于',
   snapshotRestored: '已恢复，撤销可用 Ctrl+Z',
+
+  // 全屏预览 / 演示模式
+  present: '演示',
+  presentExit: '退出演示',
+  presentTitle: '全屏预览，按 Esc 退出',
+
+  // 快照差异对比
+  snapshotDiff: '对比',
+  snapshotDiffTitle: '恢复将产生的变化',
+  snapshotDiffBack: '返回',
+  snapshotDiffEmpty: '无变化',
+  diffAdded: '新增',
+  diffRemoved: '移除',
+  diffChanged: '修改',
+
+  // 可分享只读链接
+  shareLink: '复制分享链接',
+  shareCopied: '分享链接已复制',
+  shareEncodeErr: '生成链接失败',
+  sharedViewEdit: '在本站编辑',
+  sharedInvalid: '分享链接无效或已损坏',
+
+  // AI 生成整份简历
+  generateResume: 'AI 生成',
+  genTitle: 'AI 生成简历',
+  genDesc: '描述你的经历与目标岗位',
+  genDescPh: '例如：3 年后端经验，做过电商订单中台，想投字节后端…',
+  genMaterial: '已有材料（可选，忠于事实）',
+  genMaterialPh: '粘贴已有简历/经历文本，AI 会在其基础上结构化润色',
+  genSkill: '生成风格（skill）',
+  genGenerate: '生成',
+  genGenerating: 'AI 生成中…',
+  genRegenerate: '重新生成',
+  genSaveAs: '存为新简历',
+  genNoDesc: '请填写描述',
+  genNoKey: '请先在「设置」中配置 AI 密钥',
+  genErr: '生成失败：',
+  genSaved: '已存为新简历',
+  genPreview: '预览（应用当前模板）',
 }
 
 export type Dict = typeof zh

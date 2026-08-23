@@ -321,4 +321,43 @@ export const en: Dict = {
   confirmDeleteSnapshot: 'Delete snapshot "{name}"? This cannot be undone.',
   snapshotCreatedAt: 'Created',
   snapshotRestored: 'Restored — undo with Ctrl+Z',
+
+  // Fullscreen preview / present mode
+  present: 'Present',
+  presentExit: 'Exit present',
+  presentTitle: 'Fullscreen preview, press Esc to exit',
+
+  // Snapshot diff
+  snapshotDiff: 'Compare',
+  snapshotDiffTitle: 'Changes a restore will make',
+  snapshotDiffBack: 'Back',
+  snapshotDiffEmpty: 'No changes',
+  diffAdded: 'Added',
+  diffRemoved: 'Removed',
+  diffChanged: 'Changed',
+
+  // Shareable read-only link
+  shareLink: 'Copy share link',
+  shareCopied: 'Share link copied',
+  shareEncodeErr: 'Failed to generate link',
+  sharedViewEdit: 'Edit in app',
+  sharedInvalid: 'Invalid or corrupted share link',
+
+  // AI generate full resume
+  generateResume: 'AI Generate',
+  genTitle: 'AI Generate Resume',
+  genDesc: 'Describe your experience & target role',
+  genDescPh: 'e.g. 3y backend, built an e-commerce order platform, targeting ByteDance backend…',
+  genMaterial: 'Existing material (optional, factual)',
+  genMaterialPh: 'Paste existing resume/experience text; AI will structure & polish it',
+  genSkill: 'Style (skill)',
+  genGenerate: 'Generate',
+  genGenerating: 'AI generating…',
+  genRegenerate: 'Regenerate',
+  genSaveAs: 'Save as new resume',
+  genNoDesc: 'Please describe your background',
+  genNoKey: 'Configure an AI key in Settings first',
+  genErr: 'Generation failed: ',
+  genSaved: 'Saved as a new resume',
+  genPreview: 'Preview (current template)',
 }
