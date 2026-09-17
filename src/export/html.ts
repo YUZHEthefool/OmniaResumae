@@ -30,6 +30,8 @@ export async function exportHTML(node: HTMLElement, resume: Resume, locale: Loca
   clone.style.margin = '0 auto'
   clone.removeAttribute('contenteditable')
   clone.querySelectorAll('[contenteditable]').forEach((el) => el.removeAttribute('contenteditable'))
+  // data-edit 是「编辑预览」用的定位钩子，对导出结果无意义，一并剥掉避免污染文件
+  clone.querySelectorAll('[data-edit]').forEach((el) => el.removeAttribute('data-edit'))
   // 剥离预览专用的 A4 分页引导线（preview-only），否则会进导出的 HTML
   clone.querySelectorAll('.preview-only').forEach((el) => el.remove())
   // 剥离单页预览的 export-single 类，HTML 导出应用全布局而非紧凑单页布局

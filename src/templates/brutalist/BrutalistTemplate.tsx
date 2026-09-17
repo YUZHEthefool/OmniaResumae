@@ -22,6 +22,7 @@ const meta: TemplateMeta = {
   name: { zh: '粗野主义', en: 'Brutalist' },
   style: 'Brutalism · 黑黄红 · 粗描边',
   thumbnail: '▮',
+  editable: true,
 }
 
 const BrutalistTemplate: FC<TemplateProps> = ({ resume, locale }) => {

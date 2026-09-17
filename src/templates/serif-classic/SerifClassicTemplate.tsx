@@ -20,6 +20,7 @@ const meta: TemplateMeta = {
   name: { zh: '衬线经典', en: 'Serif Classic' },
   style: 'Serif · 思源宋 · 蓝主色双栏',
   thumbnail: '▤',
+  editable: true,
 }
 
 const SerifClassicTemplate: FC<TemplateProps> = ({ resume, locale }) => {
@@ -109,7 +110,9 @@ function renderMain(section: Section, locale: Locale): ReactNode {
 function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: Locale; edu?: boolean }) {
   const w = item as WorkItem; const e = item as EducationItem
   const date = fmtDateRange(item.startDate, item.endDate, locale)
-  const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  // 携带原始（未过滤）索引：data-edit 要编码原始索引，PreviewPane 写回 arr[idx] 才对得上；
+  // 若先 filter 再 map，visible 索引与 item.highlights 原数组错位，编辑可见的第 N 条会写进另一个空条目。
+  const points = (item.highlights ?? []).map((h, i) => ({ i, text: L(h, locale) })).filter((p) => p.text)
   const primary = edu ? L(e.institution, locale) : L(w.position, locale)
   const secondary = edu ? L(e.studyType, locale) : L(w.name, locale)
   return (
@@ -122,14 +125,14 @@ function Entry({ item, locale, edu }: { item: WorkItem | EducationItem; locale: 
         {date && <span className="entry-date">{date}</span>}
       </div>
       {edu && L(e.area, locale) && <div className="entry-org">{L(e.area, locale)}</div>}
-      {points.length > 0 && <ul className="entry-points">{points.map((h, i) => <li key={i}>{L(h, locale)}</li>)}</ul>}
+      {points.length > 0 && <ul className="entry-points">{points.map((p) => <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>)}</ul>}
     </div>
   )
 }
 
 function Project({ item, locale }: { item: ProjectItem; locale: Locale }) {
   const link = item.url || item.repoUrl
-  const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  const points = (item.highlights ?? []).map((h, i) => ({ i, text: L(h, locale) })).filter((p) => p.text)
   return (
     <div className="project">
       <div className="project-head">
@@ -139,8 +142,8 @@ function Project({ item, locale }: { item: ProjectItem; locale: Locale }) {
       {(item.languages ?? []).length > 0 && (
         <div className="project-meta">{(item.languages ?? []).join(' · ')}{item.stars !== undefined ? ` · ★ ${item.stars}` : ''}</div>
       )}
-      {L(item.description, locale) && <p className="project-desc">{L(item.description, locale)}</p>}
-      {points.length > 0 && <ul className="project-points">{points.map((h, i) => <li key={i}>{L(h, locale)}</li>)}</ul>}
+      {L(item.description, locale) && <p className="project-desc" data-edit={`description::${item.id}`}>{L(item.description, locale)}</p>}
+      {points.length > 0 && <ul className="project-points">{points.map((p) => <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>)}</ul>}
     </div>
   )
 }
@@ -152,7 +155,7 @@ function SkillRows({ items, locale }: { items: SkillItem[]; locale: Locale }) {
       {items.map((s) => (
         <div className="skill-row" key={s.id}>
           <span className="skill-key">{L(s.name, locale)}</span>
-          <span className="skill-val">{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</span>
+          <span className="skill-val" data-edit={L(s.level, locale) ? `level::${s.id}` : undefined}>{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</span>
         </div>
       ))}
     </div>

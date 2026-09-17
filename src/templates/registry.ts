@@ -15,6 +15,11 @@ export interface TemplateMeta {
   style: string
   /** 缩略图（emoji 或后续替换为真实截图） */
   thumbnail: string
+  /**
+   * 支持「编辑预览」：模板给可编辑文本挂了 data-edit 钩子，PreviewPane 据此显示按钮。
+   * 不输出钩子的模板（如 AI 生成的 custom）保持隐藏，否则按钮点了没反应。
+   */
+  editable?: boolean
 }
 
 export interface TemplateProps {

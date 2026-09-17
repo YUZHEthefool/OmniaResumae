@@ -22,7 +22,11 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
   const [singlePreview, setSinglePreview] = useState(false)
   const [guide, setGuide] = useState<{ h: number; count: number }>({ h: 0, count: 0 })
 
-  const Template = useMemo(() => getTemplate(templateId) ?? getTemplate('serif-classic'), [templateId])
+  const TemplateEntry = useMemo(() => getTemplate(templateId) ?? getTemplate('serif-classic'), [templateId])
+  const Template = TemplateEntry?.Component
+  // 编辑预览只在输出 data-edit 钩子的模板下可用：内置模板都挂了钩子，
+  // AI 生成的 custom 模板没有，显示按钮会点了没反应——由 meta.editable 声明。
+  const canEdit = !!TemplateEntry?.meta.editable
 
   // 编辑预览：开启后对模板输出的每个 [data-edit] 元素单独设 contentEditable，
   // 失焦时解析 data-edit="field::itemId" 或 "field::itemId::index" 写回 store。
@@ -108,8 +112,8 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
         >
           {t('pageGuide', locale)}
         </button>
-        {/* 编辑预览：仅 Brutalist 模板输出 data-edit 钩子，其它模板点击无反应，故仅在该模板下显示按钮 */}
-        {templateId === 'brutalist' && !singlePreview && (
+        {/* 编辑预览：模板需输出 data-edit 钩子才有效（见 meta.editable）；与单页预览互斥 */}
+        {canEdit && !singlePreview && (
         <button
           type="button"
           onClick={() => setEditing((v) => !v)}
@@ -130,7 +134,7 @@ export const PreviewPane = forwardRef<HTMLDivElement>(function PreviewPane(_prop
             style={{ outline: editing ? '1px dashed #999' : 'none', position: 'relative' }}
           >
             {resume && Template ? (
-              <Template.Component resume={resume} locale={locale} />
+              <Template resume={resume} locale={locale} />
             ) : (
               <div className="text-chrome-muted text-sm">{t('emptyHint', locale as Locale)}</div>
             )}

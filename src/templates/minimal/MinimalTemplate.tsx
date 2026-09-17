@@ -21,6 +21,7 @@ const meta: TemplateMeta = {
   name: { zh: '极简 / Swiss', en: 'Minimal / Swiss' },
   style: 'Minimal · Inter · 单栏细线',
   thumbnail: '▭',
+  editable: true,
 }
 
 const MinimalTemplate: FC<TemplateProps> = ({ resume, locale }) => {
@@ -109,7 +110,8 @@ function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; loca
   const w = item as WorkItem
   const e = item as EducationItem
   const date = fmtDateRange(item.startDate, item.endDate, locale)
-  const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  // 携带原始（未过滤）索引：data-edit 要编码原始索引，PreviewPane 写回 arr[idx] 才对得上
+  const points = (item.highlights ?? []).map((h, i) => ({ i, text: L(h, locale) })).filter((p) => p.text)
   const primary = edu ? L(e.institution, locale) : L(w.position, locale)
   const secondary = edu ? L(e.studyType, locale) : L(w.name, locale)
   return (
@@ -124,7 +126,7 @@ function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; loca
       {edu && L(e.area, locale) && <div className="entry-org">{L(e.area, locale)}</div>}
       {points.length > 0 && (
         <ul className="entry-points">
-          {points.map((h, i) => <li key={i}>{L(h, locale)}</li>)}
+          {points.map((p) => <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>)}
         </ul>
       )}
     </div>
@@ -133,7 +135,7 @@ function EntryView({ item, locale, edu }: { item: WorkItem | EducationItem; loca
 
 function ProjectView({ item, locale }: { item: ProjectItem; locale: Locale }) {
   const link = item.url || item.repoUrl
-  const points = (item.highlights ?? []).filter((h) => L(h, locale))
+  const points = (item.highlights ?? []).map((h, i) => ({ i, text: L(h, locale) })).filter((p) => p.text)
   return (
     <div className="project">
       <div className="project-head">
@@ -143,10 +145,10 @@ function ProjectView({ item, locale }: { item: ProjectItem; locale: Locale }) {
       {(item.languages ?? []).length > 0 && (
         <div className="project-meta">{(item.languages ?? []).join(' · ')}{item.stars !== undefined ? ` · ★ ${item.stars}` : ''}</div>
       )}
-      {L(item.description, locale) && <p className="project-desc">{L(item.description, locale)}</p>}
+      {L(item.description, locale) && <p className="project-desc" data-edit={`description::${item.id}`}>{L(item.description, locale)}</p>}
       {points.length > 0 && (
         <ul className="project-points">
-          {points.map((h, i) => <li key={i}>{L(h, locale)}</li>)}
+          {points.map((p) => <li key={p.i} data-edit={`highlights::${item.id}::${p.i}`}>{p.text}</li>)}
         </ul>
       )}
     </div>
@@ -160,7 +162,7 @@ function SkillGrid({ items, locale }: { items: SkillItem[]; locale: Locale }) {
       {items.map((s) => (
         <div key={s.id} className="contents">
           <div className="skill-key">{L(s.name, locale)}</div>
-          <div className="skill-val">{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</div>
+          <div className="skill-val" data-edit={L(s.level, locale) ? `level::${s.id}` : undefined}>{L(s.level, locale) || (s.keywords ?? []).join(' · ')}</div>
         </div>
       ))}
     </div>
