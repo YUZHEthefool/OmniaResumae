@@ -110,8 +110,17 @@ ${isEmpty
 - add_item(section_id,item) / update_item(section_id,item_id,patch) / replace_highlights(section_id,item_id,highlights) / remove_item(...)
 - read_reference(name)：读取本 skill 的补充规则（如有）。
 ${githubPAT
-  ? `\n【GitHub 工具（已配置 PAT）】\n- list_my_repos()：列出你的 GitHub 仓库（名称/描述/stars/语言/topics/URL）。据此把真实项目填入 projects 段：name/description/keywords=topics+languages/stars/url=repoUrl/highlights 从 README 提炼。\n- get_repo_detail(owner, repo)：读某仓库的语言/stars/topics/README，精修某条项目。README 可能很长，提炼要点而非照搬。`
-  : `\n【GitHub 工具】未配置 GitHub PAT。若用户想基于真实仓库填充项目，提示去「设置」填 GitHub Personal Access Token（仅需 repo 读权限），即可用 list_my_repos / get_repo_detail。`}
+  ? `\n【GitHub 工具（已配置 PAT）】
+- list_my_repos()：列出你的 GitHub 仓库（名称/描述/stars/语言/topics/URL）。用于确定要写哪些项目。
+- get_repo_detail(owner, repo)：读某仓库的语言/stars/topics/README。README 可能很长，提炼要点而非照搬。
+- list_my_pulls(repo?, merged_only?, limit?)：列出你提交过的 PR，按仓库分组（标题/是否合并/时间/代码量/描述摘录）。
+- get_pull_detail(owner, repo, number)：读单个 PR 的完整描述正文，把一条 PR 精修成一句要点。
+【写项目要点的取材顺序（重要）】
+1. 先用 list_my_pulls 看用户在该仓库**实际做了什么**——PR 标题与描述才是「我做了什么」的证据。
+2. 再用 get_repo_detail 补「这个项目是什么」（定位、技术栈、影响力）。
+3. 不要拿 README 的 Features 段落冒充用户的工作：README 写的是项目能力，不是个人贡献。
+【要点写法】PR 编号、commit hash 对读者无意义，必须转写成「做了什么 + 带来什么影响」；能用量化就量化（合并数、代码量、涉及模块、性能或稳定性收益）。未合并的 PR 也能写，但要如实描述为「提出/实现」，不要写成已上线。`
+  : `\n【GitHub 工具】未配置 GitHub PAT。若用户想基于真实仓库与 PR 填充项目，提示去「设置」填 GitHub Personal Access Token（仅需 repo 读权限），即可用 list_my_repos / get_repo_detail / list_my_pulls / get_pull_detail。`}
 ${selectedSkill ? `\n【Skill 主指令】\n${selectedSkill.body}\n（若 skill 提到 emit_resume，请忽略，改用上述字段级工具实时编辑。）` : ''}`
   }
 

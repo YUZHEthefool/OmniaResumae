@@ -11,7 +11,7 @@ import { uid, SECTION_TITLE_PRESETS } from '@/schema/defaults'
 import { isLocalized, mergeLoc, coerceHighlights, coerceLocArray, coerceItem, LOC_BASICS_KEYS, LOC_ITEM_KEYS } from '@/schema/coerce'
 import type { Locale, Localized, Resume, SectionType } from '@/types/resume'
 import type { Skill } from '@/skills/types'
-import { listMyRepos, getRepoByName, getRepoDetail } from '@/github/client'
+import { listMyRepos, getRepoByName, getRepoDetail, getAuthLogin, searchAuthoredPulls, groupPullsByRepo, attachPullStats, statsBudget, getPullDetail } from '@/github/client'
 
 /** 镜像 createItem：按 type 给带 uid + 必填骨架的条目 */
 function baseItem(type: string): Record<string, unknown> {
@@ -409,11 +409,23 @@ export function buildResumeTools(locale: Locale, skill?: Skill | null, expectedR
   return tools
 }
 
-/* ─── GitHub 工具（只读）：让 AI 能查用户的真实仓库，据此填充项目段落 ─── */
+/* ─── GitHub 工具（只读）：让 AI 能查用户的真实仓库与 PR，据此填充项目段落 ─── */
+/** PR 描述正文摘录：去掉 markdown 标记与勾选清单噪声，压成一行，够模型判断「这条 PR 做了什么」即可 */
+function prBodyExcerpt(body: string, max = 200): string {
+  return body
+    .replace(/<!--[\s\S]*?-->/g, '')       // PR 模板里的注释块
+    .replace(/^\s*[-*]\s*\[[ xX]\]\s*/gm, '') // - [x] 勾选项
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/[`*>_]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+}
+
 /**
  * 构造 GitHub 工具集。PAT 为空时返回空数组——模型不会知道这些工具的存在，
  * 也就不会尝试调用；system prompt 另提示用户去「设置」配 PAT（按需披露，避免模型以为能用却失败）。
- * 工具只读（列仓库 / 读 README 与详情），不改仓库；PAT 仅发往 api.github.com，从不进入简历数据或导出。
+ * 工具只读（列仓库 / 读 README / 列 PR / 读 PR 详情），不改仓库；PAT 仅发往 api.github.com，从不进入简历数据或导出。
  */
 export function buildGithubTools(pat: string): ToolDef[] {
   if (!pat) return []
@@ -472,6 +484,114 @@ export function buildGithubTools(pat: string): ToolDef[] {
             homepage: r.homepage,
             // README 截断：够 AI 提取要点即可，避免长 README 撑爆对话上下文
             readme: d.readme.slice(0, 6000),
+          })
+        } catch (e) {
+          return `GitHub 查询失败：${(e as Error).message}`
+        }
+      },
+    },
+    {
+      name: 'list_my_pulls',
+      description:
+        '列出当前 GitHub 认证用户提交过的 Pull Request，按仓库分组（含标题、是否已合并、时间、代码量）。**这是判断「用户实际做了什么」的首选数据源**：README 只说明项目是什么，PR 才说明用户在里面做了什么。写或精修 project 要点前先调它。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          repo: { type: 'string', description: '只看某个仓库，形如 "owner/name"。省略则覆盖全部仓库。' },
+          merged_only: { type: 'boolean', description: '只看已合并的 PR（简历上更可信）。默认 false，含未合并。' },
+          limit: { type: 'number', description: '最多返回多少条 PR（默认 60，上限 200）。' },
+        },
+        additionalProperties: false,
+      },
+      run: async (args) => {
+        const { repo, merged_only, limit } = args as { repo?: string; merged_only?: boolean; limit?: number }
+        try {
+          const login = await getAuthLogin(pat)
+          if (!login) return 'GitHub 查询失败：PAT 无效或已过期，无法确定认证用户'
+          let pulls = await searchAuthoredPulls(login, pat, { mergedOnly: !!merged_only })
+          if (repo) {
+            const want = repo.trim().toLowerCase()
+            pulls = pulls.filter((p) => p.repo.toLowerCase() === want)
+          }
+          if (!pulls.length) {
+            return repo ? `没有在 ${repo} 提交过的 PR` : '没有找到任何 PR（该账号可能只参与过 issue 或 review）'
+          }
+          const cap = Math.max(1, Math.min(limit ?? 60, 200))
+          // 代码量统计要逐条打详情，按有无 PAT 限额（匿名 core 只有 60/h）
+          const withStats = await attachPullStats(pulls, pat, Math.min(statsBudget(pat), cap))
+          const groups = groupPullsByRepo(withStats)
+          let emitted = 0
+          const repos = groups.map((g) => {
+            const room = Math.max(0, cap - emitted)
+            const shown = g.pulls.slice(0, room)
+            emitted += shown.length
+            return {
+              repo: g.repo,
+              url: g.url,
+              total_pulls: g.totalPulls,
+              merged: g.mergedCount,
+              // 代码量只覆盖补过统计的那部分 PR，把基数一并给出，避免模型当成全量
+              code_lines: g.statsCount ? { additions: g.additions, deletions: g.deletions, based_on_pulls: g.statsCount } : null,
+              latest_pull_at: g.lastAt,
+              pulls: shown.map((p) => ({
+                number: p.number,
+                title: p.title,
+                merged: p.merged,
+                created_at: p.createdAt.slice(0, 10),
+                additions: p.additions,
+                deletions: p.deletions,
+                changed_files: p.changedFiles,
+                comments: p.comments,
+                url: p.url,
+                body_excerpt: prBodyExcerpt(p.body),
+              })),
+            }
+          })
+          return JSON.stringify({
+            author: login,
+            total_pulls: pulls.length,
+            shown_pulls: emitted,
+            truncated: emitted < pulls.length ? '仅展示前若干条，可用 repo 参数聚焦单个仓库' : undefined,
+            repos,
+          })
+        } catch (e) {
+          return `GitHub 查询失败：${(e as Error).message}`
+        }
+      },
+    },
+    {
+      name: 'get_pull_detail',
+      description:
+        '读单个 PR 的标题与描述正文（写简历要点的原始素材）+ 代码量统计 + 讨论热度。用于把某条 PR 精修成一句要点。参数 owner/repo/number 从 list_my_pulls 的结果里取。',
+      input_schema: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', description: '仓库所有者（用户名或组织名）' },
+          repo: { type: 'string', description: '仓库名' },
+          number: { type: 'number', description: 'PR 编号' },
+        },
+        required: ['owner', 'repo', 'number'],
+        additionalProperties: false,
+      },
+      run: async (args) => {
+        const { owner, repo, number } = args as { owner: string; repo: string; number: number }
+        try {
+          const d = await getPullDetail(`${owner}/${repo}`, Number(number), pat)
+          return JSON.stringify({
+            repo: `${owner}/${repo}`,
+            number,
+            title: d.title,
+            merged: d.merged,
+            state: d.state,
+            created_at: d.createdAt.slice(0, 10),
+            additions: d.additions,
+            deletions: d.deletions,
+            changed_files: d.changedFiles,
+            comments: d.comments,
+            review_comments: d.reviewComments,
+            url: d.url,
+            // PR 正文常有模板套话，截断够用即可
+            body: d.body.slice(0, 4000),
           })
         } catch (e) {
           return `GitHub 查询失败：${(e as Error).message}`

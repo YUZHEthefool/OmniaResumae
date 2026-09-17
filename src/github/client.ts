@@ -129,13 +129,26 @@ export interface GHRepoDetail {
   description: string | null
 }
 
+/** 仓库语言列表（按代码量降序，API 原生顺序）。抽出来是因为 PR 导入只要语言、
+ *  不该为了它把整份 README 也拉下来。 */
+export async function getRepoLanguages(owner: string, name: string, pat: string): Promise<string[]> {
+  try {
+    const res = await fetch(
+      `${API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/languages`,
+      { headers: headers(pat) },
+    )
+    if (!res.ok) return []
+    return Object.keys((await res.json()) as Record<string, number>)
+  } catch {
+    return []
+  }
+}
+
 export async function getRepoDetail(repo: GHRepo, pat: string): Promise<GHRepoDetail> {
   const owner = repo.full_name.split('/')[0]
   const name = repo.name
   // languages：返回 { "Python": 12345, ... }
-  const langRes = await fetch(`${API}/repos/${owner}/${name}/languages`, { headers: headers(pat) })
-  const langData = langRes.ok ? ((await langRes.json()) as Record<string, number>) : {}
-  const languages = Object.keys(langData)
+  const languages = await getRepoLanguages(owner, name, pat)
 
   // readme（API 返回 base64 content；需 UTF-8 解码，否则 CJK 乱码）
   let readme = ''
@@ -170,31 +183,11 @@ export interface ContributedRepo {
   html_url: string
 }
 
-/** 搜某用户提过的 PR，去重得到贡献过的仓库 owner/name 列表 */
+/** 搜某用户提过的 PR，去重得到贡献过的仓库 owner/name 列表。
+ *  复用 searchAuthoredPulls，避免同一份搜索结果维护两条翻页路径；顺带共享它的 memo。 */
 export async function searchContributedRepos(username: string, pat: string): Promise<ContributedRepo[]> {
-  const u = encodeURIComponent(username)
-  const seen = new Set<string>()
-  let page = 1
-  for (let i = 0; i < 10; i++) {
-    const res = await fetch(
-      `${API}/search/issues?q=author:${u}+type:pr&per_page=100&sort=created&order=desc&page=${page}`,
-      { headers: headers(pat) },
-    )
-    if (!res.ok) {
-      if (res.status === 403) throw new Error('搜索限流（403），稍后重试')
-      break // 搜索失败不阻塞主流程
-    }
-    const data = (await res.json()) as { items?: { repository_url?: string }[] }
-    const items = data.items ?? []
-    if (!items.length) break
-    for (const it of items) {
-      // repository_url 形如 https://api.github.com/repos/{owner}/{name}
-      const m = it.repository_url?.match(/\/repos\/([^/]+)\/([^/]+)$/)
-      if (m) seen.add(`${m[1]}/${m[2]}`)
-    }
-    if (items.length < 100) break
-    page++
-  }
+  const pulls = await searchAuthoredPulls(username, pat)
+  const seen = new Set(pulls.map((p) => p.repo))
   return [...seen].map((full) => {
     const [owner, name] = full.split('/')
     return { owner, name, html_url: `https://github.com/${full}` }
@@ -242,4 +235,282 @@ export async function listAllRepos(username: string, pat: string, useMine = fals
   const map = new Map<number, GHRepo>()
   for (const r of [...ownAndOrg, ...contrib]) map.set(r.id, r)
   return [...map.values()].sort((a, b) => b.stargazers_count - a.stargazers_count)
+}
+
+/* ═══════════════ 拉取请求（PR）═══════════════
+ * 仓库级数据（README/语言/stars）只能说明「项目是什么」，说明不了「你做了什么」。
+ * 这一段把 PR 变成一等数据源：标题/描述/是否合并/代码量，供简历要点提炼。
+ */
+
+export interface GHPull {
+  /** "owner/name" */
+  repo: string
+  number: number
+  title: string
+  body: string
+  url: string
+  /** 是否已合并：来自搜索结果的 pull_request.merged_at，不需要额外请求 */
+  merged: boolean
+  createdAt: string
+  closedAt: string | null
+  comments: number
+  /** 以下三项仅在 attachPullStats 补过统计后存在 */
+  additions?: number
+  deletions?: number
+  changedFiles?: number
+}
+
+export interface GHPullStats {
+  additions: number
+  deletions: number
+  changedFiles: number
+  merged: boolean
+  comments: number
+  reviewComments: number
+}
+
+/** 单 PR 详情 = 统计 + 标题/正文/状态。正文是写简历要点的原始素材。 */
+export interface GHPullDetail extends GHPullStats {
+  title: string
+  body: string
+  url: string
+  state: string
+  createdAt: string
+}
+
+/** 取 PAT 持有者的 login。失败返回空串（调用方据此回退到用户名模式，而不是直接报错）。
+ *  login 对一个 PAT 是稳定的，故成功结果做 memo——agent 每轮调 list_my_pulls 都要用它，
+ *  不缓存的话每次都白打一次 /user。失败不缓存（可能只是临时限流）。 */
+export async function getAuthLogin(pat: string): Promise<string> {
+  if (!pat) return ''
+  const hit = pullCache.get('authlogin')
+  if (hit && Date.now() - hit.at < PULL_TTL) return hit.v as string
+  try {
+    const res = await fetch(`${API}/user`, { headers: headers(pat) })
+    if (!res.ok) return ''
+    const login = ((await res.json()) as { login?: string }).login ?? ''
+    if (login) pullCache.set('authlogin', { at: Date.now(), v: login })
+    return login
+  } catch {
+    return ''
+  }
+}
+
+/** PR 相关查询的 memo。agent 一轮对话里会反复调同一个工具，而 PR 列表变化很慢。
+ *  只覆盖 PR 路径——listMyRepos / getRepoDetail 保持每次新拉，用户点「列出仓库」预期拿到新鲜数据。 */
+const PULL_TTL = 5 * 60 * 1000
+const pullCache = new Map<string, { at: number; v: unknown }>()
+
+function cached<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const hit = pullCache.get(key)
+  if (hit && Date.now() - hit.at < PULL_TTL) return Promise.resolve(hit.v as T)
+  return fn().then((v) => {
+    pullCache.set(key, { at: Date.now(), v })
+    return v
+  })
+}
+
+/** 搜索 API 硬上限：单条查询最多返回 1000 条 */
+const SEARCH_MAX = 1000
+
+interface SearchPullItem {
+  number: number
+  title?: string
+  body?: string | null
+  html_url: string
+  created_at: string
+  closed_at: string | null
+  comments?: number
+  repository_url?: string
+  pull_request?: { merged_at?: string | null }
+}
+
+/** 搜某作者提交的 PR（含未合并），按创建时间倒序，封顶 max 条。
+ *  搜索 API 限流很紧（认证 30/min、匿名 10/min），故结果做 5 分钟 memo。 */
+export async function searchAuthoredPulls(
+  author: string,
+  pat: string,
+  opts: { mergedOnly?: boolean; max?: number } = {},
+): Promise<GHPull[]> {
+  const a = author.trim()
+  if (!a) throw new Error('缺少 GitHub 用户名')
+  const max = Math.max(1, Math.min(opts.max ?? SEARCH_MAX, SEARCH_MAX))
+  const key = `pulls:${a}:${opts.mergedOnly ? 'merged' : 'all'}:${max}`
+  return cached(key, async () => {
+    const q = `author:${encodeURIComponent(a)}+type:pr${opts.mergedOnly ? '+is:merged' : ''}`
+    const out: GHPull[] = []
+    const pages = Math.ceil(max / 100)
+    for (let page = 1; page <= pages; page++) {
+      const res = await fetch(
+        `${API}/search/issues?q=${q}&per_page=100&sort=created&order=desc&page=${page}`,
+        { headers: headers(pat) },
+      )
+      if (!res.ok) {
+        // 一条都没拿到时抛出真实原因（UI 要提示）；已有结果则保留并停止翻页，不因中途限流丢数据
+        if (!out.length) {
+          if (res.status === 403 || res.status === 429) {
+            throw new Error('搜索限流（403）。稍后重试，或在「设置」配置 PAT 提高额度。')
+          }
+          if (res.status === 422) throw new Error('搜索条件无效（422）')
+          throw new Error(`GitHub 搜索失败 ${res.status}`)
+        }
+        break
+      }
+      const data = (await res.json()) as { items?: SearchPullItem[] }
+      const items = data.items ?? []
+      if (!items.length) break
+      for (const it of items) {
+        // repository_url 形如 https://api.github.com/repos/{owner}/{name}
+        const m = it.repository_url?.match(/\/repos\/([^/]+)\/([^/]+)$/)
+        if (!m) continue
+        out.push({
+          repo: `${m[1]}/${m[2]}`,
+          number: it.number,
+          title: it.title ?? '',
+          body: it.body ?? '',
+          url: it.html_url,
+          merged: !!it.pull_request?.merged_at,
+          createdAt: it.created_at,
+          closedAt: it.closed_at,
+          comments: it.comments ?? 0,
+        })
+        if (out.length >= max) break
+      }
+      if (out.length >= max || items.length < 100) break
+    }
+    return out
+  })
+}
+
+/** 单 PR 详情。失败区分「被限流」与「其它失败」：前者要停止后续批量补统计，后者只是这一条没有。 */
+async function fetchPullDetailRaw(
+  repo: string,
+  num: number,
+  pat: string,
+): Promise<{ detail: GHPullDetail | null; rateLimited: boolean }> {
+  const [owner, name] = repo.split('/')
+  if (!owner || !name) return { detail: null, rateLimited: false }
+  const res = await fetch(
+    `${API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/pulls/${num}`,
+    { headers: headers(pat) },
+  )
+  if (!res.ok) return { detail: null, rateLimited: res.status === 403 || res.status === 429 }
+  const d = (await res.json()) as {
+    title?: string; body?: string | null; html_url?: string; state?: string; created_at?: string
+    additions?: number; deletions?: number; changed_files?: number
+    merged?: boolean; comments?: number; review_comments?: number
+  }
+  return {
+    detail: {
+      title: d.title ?? '',
+      body: d.body ?? '',
+      url: d.html_url ?? `https://github.com/${repo}/pull/${num}`,
+      state: d.state ?? '',
+      createdAt: d.created_at ?? '',
+      additions: d.additions ?? 0,
+      deletions: d.deletions ?? 0,
+      changedFiles: d.changed_files ?? 0,
+      merged: !!d.merged,
+      comments: d.comments ?? 0,
+      reviewComments: d.review_comments ?? 0,
+    },
+    rateLimited: false,
+  }
+}
+
+/** 取单个 PR 详情（带 memo）。供 AI 工具按需精查某一条 PR。 */
+export async function getPullDetail(repo: string, num: number, pat: string): Promise<GHPullDetail> {
+  const key = `pullstats:${repo}#${num}`
+  const hit = pullCache.get(key)
+  if (hit && Date.now() - hit.at < PULL_TTL) return hit.v as GHPullDetail
+  const { detail, rateLimited } = await fetchPullDetailRaw(repo, num, pat)
+  if (!detail) throw new Error(rateLimited ? 'GitHub 限流（403）' : `PR ${repo}#${num} 详情获取失败`)
+  pullCache.set(key, { at: Date.now(), v: detail })
+  return detail
+}
+
+/** 给前 limit 条 PR 补代码量统计（返回新数组）。
+ *  匿名时 core 限额只有 60/h，故调用方按有无 PAT 给不同上限；并发封顶 6，别把限额打爆。
+ *  中途被限流就停止补、保留已拿到的——**绝不能因为补统计失败而丢 PR**。 */
+export async function attachPullStats(pulls: GHPull[], pat: string, limit: number): Promise<GHPull[]> {
+  const n = Math.max(0, Math.min(limit, pulls.length))
+  if (!n) return pulls.slice()
+  const out = pulls.slice()
+  const CONC = 6
+  let stopped = false
+  for (let i = 0; i < n && !stopped; i += CONC) {
+    const hi = Math.min(i + CONC, n)
+    const batch = await Promise.all(
+      out.slice(i, hi).map((p) => fetchPullDetailRaw(p.repo, p.number, pat)),
+    )
+    batch.forEach((r, k) => {
+      if (r.rateLimited) { stopped = true; return }
+      if (!r.detail) return
+      const idx = i + k
+      out[idx] = {
+        ...out[idx],
+        additions: r.detail.additions,
+        deletions: r.detail.deletions,
+        changedFiles: r.detail.changedFiles,
+        // 搜索结果里的 merged 可能滞后；详情是权威值，以它为准
+        merged: r.detail.merged,
+      }
+    })
+  }
+  return out
+}
+
+/** 按有无 PAT 决定补多少条统计：core 限额匿名 60/h、带 PAT 5000/h。
+ *  匿名时收紧到 5，避免把限额吃光导致后面的仓库/详情查询全线 403。 */
+export function statsBudget(pat: string): number {
+  return pat ? 30 : 5
+}
+
+export interface RepoContribution {
+  /** "owner/name" */
+  repo: string
+  url: string
+  /** 已合并的排在前面，其余按创建时间倒序 */
+  pulls: GHPull[]
+  totalPulls: number
+  mergedCount: number
+  additions: number
+  deletions: number
+  /** 有代码量统计的 PR 条数：additions/deletions 只对这部分求和，展示时要标注基数 */
+  statsCount: number
+  firstAt: string
+  lastAt: string
+}
+
+/** 按仓库聚合 PR。纯函数（无网络、无 DOM），便于单独验证。 */
+export function groupPullsByRepo(pulls: GHPull[]): RepoContribution[] {
+  const byRepo = new Map<string, GHPull[]>()
+  for (const p of pulls) {
+    const arr = byRepo.get(p.repo)
+    if (arr) arr.push(p)
+    else byRepo.set(p.repo, [p])
+  }
+  const out: RepoContribution[] = []
+  for (const [repo, list] of byRepo) {
+    const sorted = list.slice().sort((a, b) => {
+      if (a.merged !== b.merged) return a.merged ? -1 : 1
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+    const times = list.map((p) => p.createdAt).sort()
+    const withStats = list.filter((p) => p.additions !== undefined)
+    out.push({
+      repo,
+      url: `https://github.com/${repo}`,
+      pulls: sorted,
+      totalPulls: list.length,
+      mergedCount: list.filter((p) => p.merged).length,
+      additions: withStats.reduce((s, p) => s + (p.additions ?? 0), 0),
+      deletions: withStats.reduce((s, p) => s + (p.deletions ?? 0), 0),
+      statsCount: withStats.length,
+      firstAt: times[0] ?? '',
+      lastAt: times[times.length - 1] ?? '',
+    })
+  }
+  // 合并数多的排前面——那是最有说服力的素材；同分按 PR 总数
+  return out.sort((a, b) => b.mergedCount - a.mergedCount || b.totalPulls - a.totalPulls)
 }
