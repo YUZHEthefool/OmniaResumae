@@ -3,7 +3,8 @@
  * 简历列表 / 语言 / 模板 / 缩放 / 导入 / GitHub / 模板工坊 / AI / 导出 / 设置
  * 导入 / GitHub / 模板工坊 / 设置 均已接入弹窗；导出在顶栏下拉。
  */
-import { useState, useRef, useEffect, useMemo, type RefObject } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
 import { useResumeStore, type SaveStatus } from '@/store/resumeStore'
 import { useUIStore } from '@/store/uiStore'
@@ -60,11 +61,17 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
   const [menu, setMenu] = useState<null | 'resumes' | 'templates' | 'export'>(null)
   const [dialog, setDialog] = useState<null | 'github' | 'settings' | 'studio' | 'health' | 'snapshot' | 'generate'>(null)
   const barRef = useRef<HTMLDivElement>(null)
+  const resumesAnchorRef = useRef<HTMLDivElement>(null)
+  const templatesAnchorRef = useRef<HTMLDivElement>(null)
+  const exportAnchorRef = useRef<HTMLDivElement>(null)
   const restoreFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (barRef.current && !barRef.current.contains(e.target as Node)) setMenu(null)
+      const target = e.target as HTMLElement | null
+      // 下拉面板用 portal 挂在 body 上（为逃出顶栏 overflow 裁剪），不在 barRef 内，需单独放行
+      if (target?.closest?.('[data-dropdown]')) return
+      if (barRef.current && !barRef.current.contains(target as Node)) setMenu(null)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -258,7 +265,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       </button>
 
       {/* 简历列表 */}
-      <div className="relative">
+      <div className="relative" ref={resumesAnchorRef}>
         <button
           className={btnCls}
           onClick={() => setMenu(menu === 'resumes' ? null : 'resumes')}
@@ -266,7 +273,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
           {current?.name ?? t('resumes', locale)} ▾
         </button>
         {menu === 'resumes' && (
-          <Dropdown>
+          <Dropdown anchorRef={resumesAnchorRef} scrollRef={barRef}>
             {list.map((r) => (
               <DropdownItem
                 key={r.id}
@@ -308,12 +315,12 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       </div>
 
       {/* 模板 */}
-      <div className="relative">
+      <div className="relative" ref={templatesAnchorRef}>
         <button className={btnCls} onClick={() => setMenu(menu === 'templates' ? null : 'templates')}>
           {templates.find((t) => t.meta.id === templateId)?.meta.name[locale] ?? t('template', locale)} ▾
         </button>
         {menu === 'templates' && (
-          <Dropdown>
+          <Dropdown anchorRef={templatesAnchorRef} scrollRef={barRef}>
             {templates.map((tp) => (
               <DropdownItem
                 key={tp.meta.id}
@@ -375,7 +382,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
       <Divider />
 
       {/* 导出 */}
-      <div className="relative">
+      <div className="relative" ref={exportAnchorRef}>
         <button
           className="px-3 py-1.5 text-xs font-semibold bg-chrome-ink text-chrome-bg rounded hover:opacity-80 disabled:opacity-60"
           onClick={() => setMenu(menu === 'export' ? null : 'export')}
@@ -384,7 +391,7 @@ export function TopBar({ previewRef }: { previewRef: RefObject<HTMLDivElement> }
           {exporting ? t('exporting', locale) : t('export', locale)} ▾
         </button>
         {menu === 'export' && (
-          <Dropdown align="right">
+          <Dropdown align="right" anchorRef={exportAnchorRef} scrollRef={barRef}>
             <button className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-chrome-bg rounded" onClick={() => doExport('single')}>
               {t('exportSinglePdf', locale)}
             </button>
@@ -459,11 +466,61 @@ function IconBtn({ children, onClick, title }: { children: React.ReactNode; onCl
   )
 }
 
-function Dropdown({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
-  return (
-    <div className={clsx('absolute top-full mt-1 min-w-[200px] bg-white border border-chrome-border rounded shadow-lg p-1 z-50', align === 'right' ? 'right-0' : 'left-0')}>
+/**
+ * 下拉面板。用 portal 挂到 body + 固定定位，而不是在触发按钮下做 absolute：
+ * 顶栏根节点有 overflow-x-auto（窄屏横向滚动），CSS 会把 overflow-y 一并算成 auto，
+ * 于是 absolute 面板超出 48px 栏高就被裁掉——这正是「简历样式下拉被挡住」的原因。
+ * portal 逃出裁剪后，坐标改由锚点 getBoundingClientRect 现算。
+ */
+function Dropdown({
+  anchorRef, scrollRef, children, align = 'left',
+}: {
+  anchorRef: RefObject<HTMLElement>
+  /** 锚点所在的滚动容器：它滚动时锚点会位移，面板跟着重算坐标 */
+  scrollRef: RefObject<HTMLElement>
+  children: React.ReactNode
+  align?: 'left' | 'right'
+}) {
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null)
+
+  const measure = useCallback(() => {
+    const r = anchorRef.current?.getBoundingClientRect()
+    if (!r) return
+    setPos(
+      align === 'right'
+        ? { top: r.bottom + 4, right: window.innerWidth - r.right }
+        : { top: r.bottom + 4, left: r.left },
+    )
+  }, [anchorRef, align])
+
+  // useLayoutEffect：在 paint 前算好坐标，避免面板先出现在 (0,0) 再跳
+  useLayoutEffect(() => { measure() }, [measure])
+
+  // 跟着锚点走而不是收起：点按钮时浏览器可能因 scrollIntoView 补一个 scroll 事件，
+  // 若在此时关面板，菜单会刚打开就消失；重算坐标则无论迟到与否都无害。
+  useEffect(() => {
+    const scroller = scrollRef.current
+    scroller?.addEventListener('scroll', measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      scroller?.removeEventListener('scroll', measure)
+      window.removeEventListener('resize', measure)
+    }
+  }, [measure, scrollRef])
+
+  if (!pos) return null
+  return createPortal(
+    <div
+      data-dropdown
+      // w-max 不能省：改成 fixed 后包含块成了视口，面板内 w-full 的子项在 shrink-to-fit 时
+      // 会按视口宽度撑开（导出菜单被拉成整屏宽）。显式 max-content 让宽度回到跟随内容，
+      // max-w 兜住被撑大的 intrinsic 宽度，同时保证中英两种语言最长的导出项都不折行。
+      className="fixed w-max max-w-[300px] min-w-[200px] bg-white border border-chrome-border rounded shadow-lg p-1 z-[70]"
+      style={pos}
+    >
       {children}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
