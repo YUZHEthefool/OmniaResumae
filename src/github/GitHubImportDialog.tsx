@@ -273,13 +273,24 @@ export function GitHubImportDialog({ onClose }: { onClose: () => void }) {
               onChange={(e) => setUsername(e.target.value)}
             />
           )}
-          <input
-            type="password"
-            className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
-            placeholder="Personal Access Token（可选，提高限流并读私有仓；仅存本机）"
-            value={pat}
-            onChange={(e) => setPat(e.target.value)}
-          />
+          <div>
+            <input
+              type="password"
+              className="w-full px-2.5 py-1.5 text-sm bg-chrome-input border border-chrome-border rounded"
+              placeholder="Personal Access Token（可选，提高限流并读私有仓；仅存本机）"
+              value={pat}
+              onChange={(e) => setPat(e.target.value)}
+            />
+            <a
+              className="inline-block mt-1 text-xs text-chrome-accent hover:underline"
+              href="https://github.com/settings/tokens"
+              target="_blank"
+              rel="noreferrer"
+            >
+              创建 GitHub Token →
+            </a>
+            <span className="ml-2 text-[11px] text-chrome-muted">勾选 repo 读权限可读私有仓；留空则只读公开仓</span>
+          </div>
           <p className="text-[11px] text-chrome-muted leading-relaxed">
             {isPulls
               ? '搜出该用户提交过的 Pull Request（含未合并），按仓库分组。导入后要点取材自 PR 标题——这才是「你做了什么」的证据；已存在的项目条目会追加要点而非新增重复项目。'
